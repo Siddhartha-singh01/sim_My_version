@@ -11,6 +11,15 @@ export default {
   ],
   theme: {
     extend: {
+      // Responsive breakpoints for mobile support
+      screens: {
+        xs: '320px',
+        sm: '640px',
+        md: '768px',
+        lg: '1024px',
+        xl: '1280px',
+        '2xl': '1536px',
+      },
       fontFamily: {
         season: ['var(--font-season)'],
       },
@@ -18,6 +27,17 @@ export default {
         xs: '11px',
         small: '13px', // Override default 14px to 13px
         base: '15px', // Override default 16px to 15px
+      },
+      // Mobile-specific spacing and sizing
+      spacing: {
+        'touch-target': '44px', // Minimum touch target size (44x44px)
+        'mobile-safe': '20px', // Safe area for mobile edges
+      },
+      minWidth: {
+        'touch-target': '44px',
+      },
+      minHeight: {
+        'touch-target': '44px',
       },
       colors: {
         background: 'hsl(var(--background))',

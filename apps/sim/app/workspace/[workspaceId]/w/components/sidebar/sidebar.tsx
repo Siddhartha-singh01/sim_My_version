@@ -1,7 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { ArrowDown, Database, HelpCircle, Layout, Plus, Search, Settings } from 'lucide-react'
+import { ArrowDown, Database, HelpCircle, Layout, Menu, Plus, Search, Settings, X } from 'lucide-react'
 import Link from 'next/link'
 import { useParams, usePathname, useRouter } from 'next/navigation'
 import { Button, FolderPlus, Library, Tooltip } from '@/components/emcn'
@@ -32,6 +32,7 @@ import {
 import { useFolderStore } from '@/stores/folders/store'
 import { useSearchModalStore } from '@/stores/search-modal/store'
 import { MIN_SIDEBAR_WIDTH, useSidebarStore } from '@/stores/sidebar/store'
+import { useIsMobile } from '@/hooks/use-mobile'
 
 const logger = createLogger('Sidebar')
 
@@ -76,6 +77,10 @@ export function Sidebar() {
   const setSidebarWidth = useSidebarStore((state) => state.setSidebarWidth)
   const isCollapsed = hasHydrated ? isCollapsedStore : false
   const isOnWorkflowPage = !!workflowId
+
+  // Mobile state
+  const isMobile = useIsMobile(768) // Mobile if viewport <= 768px
+  const [isMobileDrawerOpen, setIsMobileDrawerOpen] = useState(false)
 
   const [isImporting, setIsImporting] = useState(false)
   const workspaceFileInputRef = useRef<HTMLInputElement>(null)
@@ -246,6 +251,17 @@ export function Sidebar() {
       setSidebarWidth(MIN_SIDEBAR_WIDTH)
     }
   }, [isOnWorkflowPage, isCollapsed, setIsCollapsed, setSidebarWidth])
+
+  /** Close mobile drawer when switching to desktop, ensure sidebar not collapsed on mobile */
+  useEffect(() => {
+    if (!isMobile && isMobileDrawerOpen) {
+      setIsMobileDrawerOpen(false)
+    }
+    // On mobile, ensure sidebar is not in collapsed state (use drawer instead)
+    if (isMobile && isCollapsed) {
+      setIsCollapsed(false)
+    }
+  }, [isMobile, isMobileDrawerOpen, isCollapsed, setIsCollapsed])
 
   /** Creates a workflow and scrolls to it */
   const handleCreateWorkflow = useCallback(async () => {
@@ -429,6 +445,27 @@ export function Sidebar() {
 
   return (
     <>
+      {/* Mobile hamburger button - only visible on mobile when drawer is closed */}
+      {isMobile && !isMobileDrawerOpen && (
+        <button
+          type='button'
+          className='fixed top-[14px] left-[14px] z-[45] flex h-[44px] w-[44px] items-center justify-center rounded-[8px] border border-[var(--border)] bg-[var(--surface-1)] md:hidden'
+          onClick={() => setIsMobileDrawerOpen(true)}
+          aria-label='Open sidebar'
+        >
+          <Menu className='h-[20px] w-[20px] text-[var(--text-primary)]' />
+        </button>
+      )}
+
+      {/* Mobile backdrop overlay - only visible on mobile when drawer is open */}
+      {isMobile && isMobileDrawerOpen && (
+        <div
+          className='mobile-overlay open md:hidden'
+          onClick={() => setIsMobileDrawerOpen(false)}
+          aria-label='Close sidebar'
+        />
+      )}
+
       {isCollapsed ? (
         /* Floating collapsed header */
         <div className='fixed top-[14px] left-[10px] z-10 max-w-[232px] rounded-[8px] border border-[var(--border)] bg-[var(--surface-1)] px-[12px] py-[8px]'>
@@ -458,13 +495,28 @@ export function Sidebar() {
         <>
           <aside
             ref={sidebarRef}
-            className='sidebar-container fixed inset-y-0 left-0 z-10 overflow-hidden bg-[var(--surface-1)]'
+            className={`sidebar-container ${
+              isMobile
+                ? `mobile-drawer mobile-drawer-left ${isMobileDrawerOpen ? 'open' : ''} md:relative md:translate-x-0`
+                : 'fixed'
+            } inset-y-0 left-0 z-10 overflow-hidden bg-[var(--surface-1)]`}
             aria-label='Workspace sidebar'
             onClick={handleSidebarClick}
           >
             <div className='flex h-full flex-col border-[var(--border)] border-r pt-[14px]'>
               {/* Header */}
               <div className='flex-shrink-0 px-[14px]'>
+                {/* Mobile close button */}
+                {isMobile && isMobileDrawerOpen && (
+                  <button
+                    type='button'
+                    className='mb-[12px] flex h-[32px] w-[32px] items-center justify-center rounded-[8px] border border-[var(--border)] bg-[var(--surface-1)] md:hidden'
+                    onClick={() => setIsMobileDrawerOpen(false)}
+                    aria-label='Close sidebar'
+                  >
+                    <X className='h-[16px] w-[16px] text-[var(--text-primary)]' />
+                  </button>
+                )}
                 <WorkspaceHeader
                   activeWorkspace={activeWorkspace}
                   workspaceId={workspaceId}
@@ -628,8 +680,8 @@ export function Sidebar() {
             </div>
           </aside>
 
-          {/* Resize Handle - Only visible on workflow pages */}
-          {isOnWorkflowPage && (
+          {/* Resize Handle - Only visible on workflow pages and desktop */}
+          {isOnWorkflowPage && !isMobile && (
             <div
               className='fixed top-0 bottom-0 left-[calc(var(--sidebar-width)-4px)] z-20 w-[8px] cursor-ew-resize'
               onMouseDown={handleMouseDown}

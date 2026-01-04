@@ -1,7 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { ArrowUp, Square } from 'lucide-react'
+import { ArrowUp, ChevronUp, Square, X } from 'lucide-react'
 import { useParams, useRouter } from 'next/navigation'
 import {
   BubbleChatPreview,
@@ -46,6 +46,7 @@ import { useVariablesStore } from '@/stores/variables/store'
 import { useWorkflowJsonStore } from '@/stores/workflows/json/store'
 import { useWorkflowRegistry } from '@/stores/workflows/registry/store'
 import { useWorkflowStore } from '@/stores/workflows/workflow/store'
+import { useIsMobile } from '@/hooks/use-mobile'
 
 const logger = createLogger('Panel')
 /**
@@ -81,6 +82,10 @@ export function Panel() {
   const toolbarRef = useRef<{
     focusSearch: () => void
   } | null>(null)
+
+  // Mobile state
+  const isMobile = useIsMobile(768) // Mobile if viewport <= 768px
+  const [isMobileDrawerOpen, setIsMobileDrawerOpen] = useState(false)
 
   // State
   const [isMenuOpen, setIsMenuOpen] = useState(false)
@@ -164,6 +169,13 @@ export function Panel() {
   useEffect(() => {
     setHasHydrated(true)
   }, [setHasHydrated])
+
+  /** Close mobile drawer when switching to desktop */
+  useEffect(() => {
+    if (!isMobile && isMobileDrawerOpen) {
+      setIsMobileDrawerOpen(false)
+    }
+  }, [isMobile, isMobileDrawerOpen])
 
   /**
    * Handles tab click events

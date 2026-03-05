@@ -490,6 +490,8 @@ export async function saveWorkflowToNormalizedTables(
         tx.delete(workflowSubflows).where(eq(workflowSubflows.workflowId, workflowId)),
       ])
 
+      const CHUNK_SIZE = 50
+
       // Insert blocks
       if (Object.keys(state.blocks).length > 0) {
         const blockInserts = Object.values(state.blocks).map((block) => ({
@@ -512,7 +514,9 @@ export async function saveWorkflowToNormalizedTables(
           locked: block.locked ?? false,
         }))
 
-        await tx.insert(workflowBlocks).values(blockInserts)
+        for (let i = 0; i < blockInserts.length; i += CHUNK_SIZE) {
+          await tx.insert(workflowBlocks).values(blockInserts.slice(i, i + CHUNK_SIZE))
+        }
       }
 
       // Insert edges
@@ -526,7 +530,9 @@ export async function saveWorkflowToNormalizedTables(
           targetHandle: edge.targetHandle || null,
         }))
 
-        await tx.insert(workflowEdges).values(edgeInserts)
+        for (let i = 0; i < edgeInserts.length; i += CHUNK_SIZE) {
+          await tx.insert(workflowEdges).values(edgeInserts.slice(i, i + CHUNK_SIZE))
+        }
       }
 
       // Insert subflows (loops and parallels)
@@ -553,7 +559,9 @@ export async function saveWorkflowToNormalizedTables(
       })
 
       if (subflowInserts.length > 0) {
-        await tx.insert(workflowSubflows).values(subflowInserts)
+        for (let i = 0; i < subflowInserts.length; i += CHUNK_SIZE) {
+          await tx.insert(workflowSubflows).values(subflowInserts.slice(i, i + CHUNK_SIZE))
+        }
       }
     })
 

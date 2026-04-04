@@ -1,6 +1,7 @@
 import { GoogleBigQueryIcon } from '@/components/icons'
+import { getScopesForService } from '@/lib/oauth/utils'
 import type { BlockConfig } from '@/blocks/types'
-import { AuthMode } from '@/blocks/types'
+import { AuthMode, IntegrationType } from '@/blocks/types'
 
 export const GoogleBigQueryBlock: BlockConfig = {
   type: 'google_bigquery',
@@ -10,6 +11,8 @@ export const GoogleBigQueryBlock: BlockConfig = {
     'Connect to Google BigQuery to run SQL queries, list datasets and tables, get table metadata, and insert rows.',
   docsLink: 'https://docs.sim.ai/tools/google_bigquery',
   category: 'tools',
+  integrationType: IntegrationType.Databases,
+  tags: ['data-warehouse', 'google-workspace', 'data-analytics'],
   bgColor: '#E0E0E0',
   icon: GoogleBigQueryIcon,
   authMode: AuthMode.OAuth,
@@ -36,7 +39,7 @@ export const GoogleBigQueryBlock: BlockConfig = {
       mode: 'basic',
       required: true,
       serviceId: 'google-bigquery',
-      requiredScopes: ['https://www.googleapis.com/auth/bigquery'],
+      requiredScopes: getScopesForService('google-bigquery'),
       placeholder: 'Select Google account',
     },
     {
@@ -48,7 +51,6 @@ export const GoogleBigQueryBlock: BlockConfig = {
       placeholder: 'Enter credential ID',
       required: true,
     },
-
     {
       id: 'projectId',
       title: 'Project ID',
@@ -110,19 +112,51 @@ Return ONLY the SQL query - no explanations, no quotes, no extra text.`,
     },
 
     {
+      id: 'datasetSelector',
+      title: 'Dataset',
+      type: 'project-selector',
+      canonicalParamId: 'datasetId',
+      serviceId: 'google-bigquery',
+      selectorKey: 'bigquery.datasets',
+      selectorAllowSearch: false,
+      placeholder: 'Select BigQuery dataset',
+      dependsOn: ['credential', 'projectId'],
+      mode: 'basic',
+      condition: { field: 'operation', value: ['list_tables', 'get_table', 'insert_rows'] },
+      required: { field: 'operation', value: ['list_tables', 'get_table', 'insert_rows'] },
+    },
+    {
       id: 'datasetId',
       title: 'Dataset ID',
       type: 'short-input',
+      canonicalParamId: 'datasetId',
       placeholder: 'Enter BigQuery dataset ID',
+      mode: 'advanced',
       condition: { field: 'operation', value: ['list_tables', 'get_table', 'insert_rows'] },
       required: { field: 'operation', value: ['list_tables', 'get_table', 'insert_rows'] },
     },
 
     {
+      id: 'tableSelector',
+      title: 'Table',
+      type: 'file-selector',
+      canonicalParamId: 'tableId',
+      serviceId: 'google-bigquery',
+      selectorKey: 'bigquery.tables',
+      selectorAllowSearch: false,
+      placeholder: 'Select BigQuery table',
+      dependsOn: ['credential', 'projectId', 'datasetSelector'],
+      mode: 'basic',
+      condition: { field: 'operation', value: ['get_table', 'insert_rows'] },
+      required: { field: 'operation', value: ['get_table', 'insert_rows'] },
+    },
+    {
       id: 'tableId',
       title: 'Table ID',
       type: 'short-input',
+      canonicalParamId: 'tableId',
       placeholder: 'Enter BigQuery table ID',
+      mode: 'advanced',
       condition: { field: 'operation', value: ['get_table', 'insert_rows'] },
       required: { field: 'operation', value: ['get_table', 'insert_rows'] },
     },

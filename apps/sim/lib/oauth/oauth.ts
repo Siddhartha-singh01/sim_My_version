@@ -3,11 +3,14 @@ import {
   AirtableIcon,
   AsanaIcon,
   AttioIcon,
+  AzureIcon,
+  BoxCompanyIcon,
   CalComIcon,
   ConfluenceIcon,
+  DocuSignIcon,
   DropboxIcon,
-  GithubIcon,
   GmailIcon,
+  GoogleAdsIcon,
   GoogleBigQueryIcon,
   GoogleCalendarIcon,
   GoogleContactsIcon,
@@ -63,10 +66,13 @@ export const OAUTH_PROVIDERS: Record<string, OAuthProviderConfig> = {
         icon: GmailIcon,
         baseProviderIcon: GoogleIcon,
         scopes: [
+          'https://www.googleapis.com/auth/userinfo.email',
+          'https://www.googleapis.com/auth/userinfo.profile',
           'https://www.googleapis.com/auth/gmail.send',
           'https://www.googleapis.com/auth/gmail.modify',
           'https://www.googleapis.com/auth/gmail.labels',
         ],
+        serviceAccountProviderId: 'google-service-account',
       },
       'google-drive': {
         name: 'Google Drive',
@@ -75,9 +81,12 @@ export const OAUTH_PROVIDERS: Record<string, OAuthProviderConfig> = {
         icon: GoogleDriveIcon,
         baseProviderIcon: GoogleIcon,
         scopes: [
+          'https://www.googleapis.com/auth/userinfo.email',
+          'https://www.googleapis.com/auth/userinfo.profile',
           'https://www.googleapis.com/auth/drive.file',
           'https://www.googleapis.com/auth/drive',
         ],
+        serviceAccountProviderId: 'google-service-account',
       },
       'google-docs': {
         name: 'Google Docs',
@@ -86,9 +95,12 @@ export const OAUTH_PROVIDERS: Record<string, OAuthProviderConfig> = {
         icon: GoogleDocsIcon,
         baseProviderIcon: GoogleIcon,
         scopes: [
+          'https://www.googleapis.com/auth/userinfo.email',
+          'https://www.googleapis.com/auth/userinfo.profile',
           'https://www.googleapis.com/auth/drive.file',
           'https://www.googleapis.com/auth/drive',
         ],
+        serviceAccountProviderId: 'google-service-account',
       },
       'google-sheets': {
         name: 'Google Sheets',
@@ -97,9 +109,12 @@ export const OAUTH_PROVIDERS: Record<string, OAuthProviderConfig> = {
         icon: GoogleSheetsIcon,
         baseProviderIcon: GoogleIcon,
         scopes: [
+          'https://www.googleapis.com/auth/userinfo.email',
+          'https://www.googleapis.com/auth/userinfo.profile',
           'https://www.googleapis.com/auth/drive.file',
           'https://www.googleapis.com/auth/drive',
         ],
+        serviceAccountProviderId: 'google-service-account',
       },
       'google-forms': {
         name: 'Google Forms',
@@ -114,6 +129,7 @@ export const OAUTH_PROVIDERS: Record<string, OAuthProviderConfig> = {
           'https://www.googleapis.com/auth/forms.body',
           'https://www.googleapis.com/auth/forms.responses.readonly',
         ],
+        serviceAccountProviderId: 'google-service-account',
       },
       'google-calendar': {
         name: 'Google Calendar',
@@ -121,7 +137,12 @@ export const OAUTH_PROVIDERS: Record<string, OAuthProviderConfig> = {
         providerId: 'google-calendar',
         icon: GoogleCalendarIcon,
         baseProviderIcon: GoogleIcon,
-        scopes: ['https://www.googleapis.com/auth/calendar'],
+        scopes: [
+          'https://www.googleapis.com/auth/userinfo.email',
+          'https://www.googleapis.com/auth/userinfo.profile',
+          'https://www.googleapis.com/auth/calendar',
+        ],
+        serviceAccountProviderId: 'google-service-account',
       },
       'google-contacts': {
         name: 'Google Contacts',
@@ -129,7 +150,24 @@ export const OAUTH_PROVIDERS: Record<string, OAuthProviderConfig> = {
         providerId: 'google-contacts',
         icon: GoogleContactsIcon,
         baseProviderIcon: GoogleIcon,
-        scopes: ['https://www.googleapis.com/auth/contacts'],
+        scopes: [
+          'https://www.googleapis.com/auth/userinfo.email',
+          'https://www.googleapis.com/auth/userinfo.profile',
+          'https://www.googleapis.com/auth/contacts',
+        ],
+        serviceAccountProviderId: 'google-service-account',
+      },
+      'google-ads': {
+        name: 'Google Ads',
+        description: 'Query campaigns, ad groups, and performance metrics in Google Ads.',
+        providerId: 'google-ads',
+        icon: GoogleAdsIcon,
+        baseProviderIcon: GoogleIcon,
+        scopes: [
+          'https://www.googleapis.com/auth/userinfo.email',
+          'https://www.googleapis.com/auth/userinfo.profile',
+          'https://www.googleapis.com/auth/adwords',
+        ],
       },
       'google-bigquery': {
         name: 'Google BigQuery',
@@ -137,7 +175,12 @@ export const OAUTH_PROVIDERS: Record<string, OAuthProviderConfig> = {
         providerId: 'google-bigquery',
         icon: GoogleBigQueryIcon,
         baseProviderIcon: GoogleIcon,
-        scopes: ['https://www.googleapis.com/auth/bigquery'],
+        scopes: [
+          'https://www.googleapis.com/auth/userinfo.email',
+          'https://www.googleapis.com/auth/userinfo.profile',
+          'https://www.googleapis.com/auth/bigquery',
+        ],
+        serviceAccountProviderId: 'google-service-account',
       },
       'google-tasks': {
         name: 'Google Tasks',
@@ -145,7 +188,12 @@ export const OAUTH_PROVIDERS: Record<string, OAuthProviderConfig> = {
         providerId: 'google-tasks',
         icon: GoogleTasksIcon,
         baseProviderIcon: GoogleIcon,
-        scopes: ['https://www.googleapis.com/auth/tasks'],
+        scopes: [
+          'https://www.googleapis.com/auth/userinfo.email',
+          'https://www.googleapis.com/auth/userinfo.profile',
+          'https://www.googleapis.com/auth/tasks',
+        ],
+        serviceAccountProviderId: 'google-service-account',
       },
       'google-vault': {
         name: 'Google Vault',
@@ -154,9 +202,12 @@ export const OAUTH_PROVIDERS: Record<string, OAuthProviderConfig> = {
         icon: GoogleIcon,
         baseProviderIcon: GoogleIcon,
         scopes: [
+          'https://www.googleapis.com/auth/userinfo.email',
+          'https://www.googleapis.com/auth/userinfo.profile',
           'https://www.googleapis.com/auth/ediscovery',
           'https://www.googleapis.com/auth/devstorage.read_only',
         ],
+        serviceAccountProviderId: 'google-service-account',
       },
       'google-groups': {
         name: 'Google Groups',
@@ -165,9 +216,12 @@ export const OAUTH_PROVIDERS: Record<string, OAuthProviderConfig> = {
         icon: GoogleGroupsIcon,
         baseProviderIcon: GoogleIcon,
         scopes: [
+          'https://www.googleapis.com/auth/userinfo.email',
+          'https://www.googleapis.com/auth/userinfo.profile',
           'https://www.googleapis.com/auth/admin.directory.group',
           'https://www.googleapis.com/auth/admin.directory.group.member',
         ],
+        serviceAccountProviderId: 'google-service-account',
       },
       'google-meet': {
         name: 'Google Meet',
@@ -176,9 +230,21 @@ export const OAUTH_PROVIDERS: Record<string, OAuthProviderConfig> = {
         icon: GoogleMeetIcon,
         baseProviderIcon: GoogleIcon,
         scopes: [
+          'https://www.googleapis.com/auth/userinfo.email',
+          'https://www.googleapis.com/auth/userinfo.profile',
           'https://www.googleapis.com/auth/meetings.space.created',
           'https://www.googleapis.com/auth/meetings.space.readonly',
         ],
+        serviceAccountProviderId: 'google-service-account',
+      },
+      'google-service-account': {
+        name: 'Google Service Account',
+        description: 'Authenticate with a JSON key file from Google Cloud Console.',
+        providerId: 'google-service-account',
+        icon: GoogleIcon,
+        baseProviderIcon: GoogleIcon,
+        scopes: [],
+        authType: 'service_account',
       },
       'vertex-ai': {
         name: 'Vertex AI',
@@ -186,7 +252,11 @@ export const OAUTH_PROVIDERS: Record<string, OAuthProviderConfig> = {
         providerId: 'vertex-ai',
         icon: VertexIcon,
         baseProviderIcon: VertexIcon,
-        scopes: ['https://www.googleapis.com/auth/cloud-platform'],
+        scopes: [
+          'https://www.googleapis.com/auth/userinfo.email',
+          'https://www.googleapis.com/auth/userinfo.profile',
+          'https://www.googleapis.com/auth/cloud-platform',
+        ],
       },
     },
     defaultService: 'gmail',
@@ -195,6 +265,24 @@ export const OAUTH_PROVIDERS: Record<string, OAuthProviderConfig> = {
     name: 'Microsoft',
     icon: MicrosoftIcon,
     services: {
+      'microsoft-ad': {
+        name: 'Azure AD',
+        description: 'Connect to Azure AD (Microsoft Entra ID) and manage users and groups.',
+        providerId: 'microsoft-ad',
+        icon: AzureIcon,
+        baseProviderIcon: MicrosoftIcon,
+        scopes: [
+          'openid',
+          'profile',
+          'email',
+          'User.Read.All',
+          'User.ReadWrite.All',
+          'Group.ReadWrite.All',
+          'GroupMember.ReadWrite.All',
+          'Directory.Read.All',
+          'offline_access',
+        ],
+      },
       'microsoft-dataverse': {
         name: 'Microsoft Dataverse',
         description: 'Connect to Microsoft Dataverse and manage records.',
@@ -305,21 +393,6 @@ export const OAUTH_PROVIDERS: Record<string, OAuthProviderConfig> = {
       },
     },
     defaultService: 'outlook',
-  },
-  github: {
-    name: 'GitHub',
-    icon: GithubIcon,
-    services: {
-      github: {
-        name: 'GitHub',
-        description: 'Manage repositories, issues, and pull requests.',
-        providerId: 'github-repo',
-        icon: GithubIcon,
-        baseProviderIcon: GithubIcon,
-        scopes: ['repo', 'user:email', 'read:user', 'workflow'],
-      },
-    },
-    defaultService: 'github',
   },
   x: {
     name: 'X',
@@ -440,6 +513,7 @@ export const OAUTH_PROVIDERS: Record<string, OAuthProviderConfig> = {
           'read:comment:jira',
           'delete:comment:jira',
           'read:attachment:jira',
+          'write:attachment:jira',
           'delete:attachment:jira',
           'write:issue-worklog:jira',
           'read:issue-worklog:jira',
@@ -539,6 +613,21 @@ export const OAUTH_PROVIDERS: Record<string, OAuthProviderConfig> = {
     },
     defaultService: 'linear',
   },
+  box: {
+    name: 'Box',
+    icon: BoxCompanyIcon,
+    services: {
+      box: {
+        name: 'Box',
+        description: 'Manage files, folders, and e-signatures with Box.',
+        providerId: 'box',
+        icon: BoxCompanyIcon,
+        baseProviderIcon: BoxCompanyIcon,
+        scopes: ['root_readwrite', 'sign_requests.readwrite'],
+      },
+    },
+    defaultService: 'box',
+  },
   dropbox: {
     name: 'Dropbox',
     icon: DropboxIcon,
@@ -605,6 +694,7 @@ export const OAUTH_PROVIDERS: Record<string, OAuthProviderConfig> = {
           'im:history',
           'im:read',
           'users:read',
+          // TODO: Add 'users:read.email' once Slack app review is approved
           'files:write',
           'files:read',
           'canvases:write',
@@ -671,7 +761,7 @@ export const OAUTH_PROVIDERS: Record<string, OAuthProviderConfig> = {
         providerId: 'webflow',
         icon: WebflowIcon,
         baseProviderIcon: WebflowIcon,
-        scopes: ['cms:read', 'cms:write', 'sites:read', 'sites:write'],
+        scopes: ['cms:read', 'cms:write', 'sites:read', 'sites:write', 'forms:read'],
       },
     },
     defaultService: 'webflow',
@@ -746,6 +836,21 @@ export const OAUTH_PROVIDERS: Record<string, OAuthProviderConfig> = {
     },
     defaultService: 'calcom',
   },
+  docusign: {
+    name: 'DocuSign',
+    icon: DocuSignIcon,
+    services: {
+      docusign: {
+        name: 'DocuSign',
+        description: 'Send documents for e-signature with DocuSign.',
+        providerId: 'docusign',
+        icon: DocuSignIcon,
+        baseProviderIcon: DocuSignIcon,
+        scopes: ['signature', 'extended'],
+      },
+    },
+    defaultService: 'docusign',
+  },
   pipedrive: {
     name: 'Pipedrive',
     icon: PipedriveIcon,
@@ -803,6 +908,7 @@ export const OAUTH_PROVIDERS: Record<string, OAuthProviderConfig> = {
           'crm.lists.read',
           'crm.lists.write',
           'tickets',
+          'oauth',
         ],
       },
     },
@@ -833,7 +939,7 @@ export const OAUTH_PROVIDERS: Record<string, OAuthProviderConfig> = {
         providerId: 'salesforce',
         icon: SalesforceIcon,
         baseProviderIcon: SalesforceIcon,
-        scopes: ['api', 'refresh_token', 'openid', 'offline_access'],
+        scopes: ['api', 'refresh_token', 'openid'],
       },
     },
     defaultService: 'salesforce',
@@ -927,6 +1033,11 @@ interface ProviderAuthConfig {
    * instead of in the request body. Used by Cal.com.
    */
   refreshTokenInAuthHeader?: boolean
+  /**
+   * If true, the token endpoint expects a JSON body with Content-Type: application/json
+   * instead of the default application/x-www-form-urlencoded. Used by Notion.
+   */
+  useJsonBody?: boolean
 }
 
 /**
@@ -951,19 +1062,6 @@ function getProviderAuthConfig(provider: string): ProviderAuthConfig {
         clientId,
         clientSecret,
         useBasicAuth: false,
-      }
-    }
-    case 'github': {
-      const { clientId, clientSecret } = getCredentials(
-        env.GITHUB_CLIENT_ID,
-        env.GITHUB_CLIENT_SECRET
-      )
-      return {
-        tokenEndpoint: 'https://github.com/login/oauth/access_token',
-        clientId,
-        clientSecret,
-        useBasicAuth: false,
-        additionalHeaders: { Accept: 'application/json' },
       }
     }
     case 'x': {
@@ -1036,8 +1134,9 @@ function getProviderAuthConfig(provider: string): ProviderAuthConfig {
         tokenEndpoint: 'https://api.notion.com/v1/oauth/token',
         clientId,
         clientSecret,
-        useBasicAuth: false,
+        useBasicAuth: true,
         supportsRefreshTokenRotation: true,
+        useJsonBody: true,
       }
     }
     case 'microsoft':
@@ -1080,6 +1179,28 @@ function getProviderAuthConfig(provider: string): ProviderAuthConfig {
         useBasicAuth: false,
       }
     }
+    case 'box': {
+      const { clientId, clientSecret } = getCredentials(env.BOX_CLIENT_ID, env.BOX_CLIENT_SECRET)
+      return {
+        tokenEndpoint: 'https://api.box.com/oauth2/token',
+        clientId,
+        clientSecret,
+        useBasicAuth: false,
+      }
+    }
+    case 'docusign': {
+      const { clientId, clientSecret } = getCredentials(
+        env.DOCUSIGN_CLIENT_ID,
+        env.DOCUSIGN_CLIENT_SECRET
+      )
+      return {
+        tokenEndpoint: 'https://account-d.docusign.com/oauth/token',
+        clientId,
+        clientSecret,
+        useBasicAuth: true,
+        supportsRefreshTokenRotation: false,
+      }
+    }
     case 'dropbox': {
       const { clientId, clientSecret } = getCredentials(
         env.DROPBOX_CLIENT_ID,
@@ -1090,6 +1211,7 @@ function getProviderAuthConfig(provider: string): ProviderAuthConfig {
         clientId,
         clientSecret,
         useBasicAuth: false,
+        supportsRefreshTokenRotation: false,
       }
     }
     case 'slack': {
@@ -1275,9 +1397,9 @@ function getProviderAuthConfig(provider: string): ProviderAuthConfig {
 function buildAuthRequest(
   config: ProviderAuthConfig,
   refreshToken: string
-): { headers: Record<string, string>; bodyParams: Record<string, string> } {
+): { headers: Record<string, string>; bodyParams: Record<string, string>; useJsonBody?: boolean } {
   const headers: Record<string, string> = {
-    'Content-Type': 'application/x-www-form-urlencoded',
+    'Content-Type': config.useJsonBody ? 'application/json' : 'application/x-www-form-urlencoded',
     ...config.additionalHeaders,
   }
 
@@ -1306,7 +1428,7 @@ function buildAuthRequest(
     }
   }
 
-  return { headers, bodyParams }
+  return { headers, bodyParams, useJsonBody: config.useJsonBody }
 }
 
 /**
@@ -1341,12 +1463,12 @@ export async function refreshOAuthToken(
 
     const config = getProviderAuthConfig(provider)
 
-    const { headers, bodyParams } = buildAuthRequest(config, refreshToken)
+    const { headers, bodyParams, useJsonBody } = buildAuthRequest(config, refreshToken)
 
     const response = await fetch(config.tokenEndpoint, {
       method: 'POST',
       headers,
-      body: new URLSearchParams(bodyParams).toString(),
+      body: useJsonBody ? JSON.stringify(bodyParams) : new URLSearchParams(bodyParams).toString(),
     })
 
     if (!response.ok) {
@@ -1403,7 +1525,9 @@ export async function refreshOAuthToken(
       refreshToken: newRefreshToken || refreshToken, // Return new refresh token if available
     }
   } catch (error) {
-    logger.error('Error refreshing token:', { error })
+    logger.error('Error refreshing token:', {
+      error: error instanceof Error ? error.message : String(error),
+    })
     return null
   }
 }

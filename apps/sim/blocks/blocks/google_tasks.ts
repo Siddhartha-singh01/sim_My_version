@@ -1,6 +1,8 @@
 import { GoogleTasksIcon } from '@/components/icons'
+import { getScopesForService } from '@/lib/oauth/utils'
 import type { BlockConfig } from '@/blocks/types'
-import { AuthMode } from '@/blocks/types'
+import { AuthMode, IntegrationType } from '@/blocks/types'
+import { SERVICE_ACCOUNT_SUBBLOCKS } from '@/blocks/utils'
 import type { GoogleTasksResponse } from '@/tools/google_tasks/types'
 
 export const GoogleTasksBlock: BlockConfig<GoogleTasksResponse> = {
@@ -11,6 +13,8 @@ export const GoogleTasksBlock: BlockConfig<GoogleTasksResponse> = {
     'Integrate Google Tasks into your workflow. Create, read, update, delete, and list tasks and task lists.',
   docsLink: 'https://docs.sim.ai/tools/google_tasks',
   category: 'tools',
+  integrationType: IntegrationType.Productivity,
+  tags: ['google-workspace', 'project-management', 'scheduling'],
   bgColor: '#E0E0E0',
   icon: GoogleTasksIcon,
   authMode: AuthMode.OAuth,
@@ -38,7 +42,7 @@ export const GoogleTasksBlock: BlockConfig<GoogleTasksResponse> = {
       mode: 'basic',
       required: true,
       serviceId: 'google-tasks',
-      requiredScopes: ['https://www.googleapis.com/auth/tasks'],
+      requiredScopes: getScopesForService('google-tasks'),
       placeholder: 'Select Google Tasks account',
     },
     {
@@ -50,13 +54,29 @@ export const GoogleTasksBlock: BlockConfig<GoogleTasksResponse> = {
       placeholder: 'Enter credential ID',
       required: true,
     },
+    ...SERVICE_ACCOUNT_SUBBLOCKS,
 
-    // Task List ID - shown for all task operations (not list_task_lists)
+    // Task List - shown for all task operations (not list_task_lists)
+    {
+      id: 'taskListSelector',
+      title: 'Task List',
+      type: 'project-selector',
+      canonicalParamId: 'taskListId',
+      serviceId: 'google-tasks',
+      selectorKey: 'google.tasks.lists',
+      selectorAllowSearch: false,
+      placeholder: 'Select task list',
+      dependsOn: ['credential'],
+      mode: 'basic',
+      condition: { field: 'operation', value: 'list_task_lists', not: true },
+    },
     {
       id: 'taskListId',
       title: 'Task List ID',
       type: 'short-input',
+      canonicalParamId: 'taskListId',
       placeholder: 'Task list ID (leave empty for default list)',
+      mode: 'advanced',
       condition: { field: 'operation', value: 'list_task_lists', not: true },
     },
 
@@ -210,7 +230,9 @@ Return ONLY the timestamp - no explanations, no extra text.`,
       params: (params) => {
         const { oauthCredential, operation, showCompleted, maxResults, ...rest } = params
 
-        const processedParams: Record<string, unknown> = { ...rest }
+        const processedParams: Record<string, unknown> = {
+          ...rest,
+        }
 
         if (maxResults && typeof maxResults === 'string') {
           processedParams.maxResults = Number.parseInt(maxResults, 10)

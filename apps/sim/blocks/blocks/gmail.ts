@@ -1,7 +1,12 @@
 import { GmailIcon } from '@/components/icons'
+import { getScopesForService } from '@/lib/oauth/utils'
 import type { BlockConfig } from '@/blocks/types'
-import { AuthMode } from '@/blocks/types'
-import { createVersionedToolSelector, normalizeFileInput } from '@/blocks/utils'
+import { AuthMode, IntegrationType } from '@/blocks/types'
+import {
+  createVersionedToolSelector,
+  normalizeFileInput,
+  SERVICE_ACCOUNT_SUBBLOCKS,
+} from '@/blocks/utils'
 import type { GmailToolResponse } from '@/tools/gmail/types'
 import { getTrigger } from '@/triggers'
 
@@ -45,6 +50,8 @@ export const GmailBlock: BlockConfig<GmailToolResponse> = {
     'Integrate Gmail into the workflow. Can send, read, search, and move emails. Can be used in trigger mode to trigger a workflow when a new email is received.',
   docsLink: 'https://docs.sim.ai/tools/gmail',
   category: 'tools',
+  integrationType: IntegrationType.Email,
+  tags: ['google-workspace', 'messaging'],
   bgColor: '#E0E0E0',
   icon: GmailIcon,
   hideFromToolbar: true,
@@ -79,11 +86,7 @@ export const GmailBlock: BlockConfig<GmailToolResponse> = {
       canonicalParamId: 'oauthCredential',
       mode: 'basic',
       serviceId: 'gmail',
-      requiredScopes: [
-        'https://www.googleapis.com/auth/gmail.send',
-        'https://www.googleapis.com/auth/gmail.modify',
-        'https://www.googleapis.com/auth/gmail.labels',
-      ],
+      requiredScopes: getScopesForService('gmail'),
       placeholder: 'Select Gmail account',
       required: true,
     },
@@ -96,6 +99,7 @@ export const GmailBlock: BlockConfig<GmailToolResponse> = {
       placeholder: 'Enter credential ID',
       required: true,
     },
+    ...SERVICE_ACCOUNT_SUBBLOCKS,
     // Send Email Fields
     {
       id: 'to',
@@ -222,7 +226,7 @@ Return ONLY the email body - no explanations, no extra text.`,
       canonicalParamId: 'folder',
       serviceId: 'gmail',
       selectorKey: 'gmail.labels',
-      requiredScopes: ['https://www.googleapis.com/auth/gmail.labels'],
+      requiredScopes: getScopesForService('gmail'),
       placeholder: 'Select Gmail label/folder',
       dependsOn: ['credential'],
       mode: 'basic',
@@ -303,7 +307,7 @@ Return ONLY the search query - no explanations, no extra text.`,
       canonicalParamId: 'addLabelIds',
       serviceId: 'gmail',
       selectorKey: 'gmail.labels',
-      requiredScopes: ['https://www.googleapis.com/auth/gmail.labels'],
+      requiredScopes: getScopesForService('gmail'),
       placeholder: 'Select destination label',
       dependsOn: ['credential'],
       mode: 'basic',
@@ -329,7 +333,7 @@ Return ONLY the search query - no explanations, no extra text.`,
       canonicalParamId: 'removeLabelIds',
       serviceId: 'gmail',
       selectorKey: 'gmail.labels',
-      requiredScopes: ['https://www.googleapis.com/auth/gmail.labels'],
+      requiredScopes: getScopesForService('gmail'),
       placeholder: 'Select label to remove',
       dependsOn: ['credential'],
       mode: 'basic',
@@ -382,7 +386,7 @@ Return ONLY the search query - no explanations, no extra text.`,
       canonicalParamId: 'manageLabelId',
       serviceId: 'gmail',
       selectorKey: 'gmail.labels',
-      requiredScopes: ['https://www.googleapis.com/auth/gmail.labels'],
+      requiredScopes: getScopesForService('gmail'),
       placeholder: 'Select label',
       dependsOn: ['credential'],
       mode: 'basic',
@@ -556,6 +560,8 @@ export const GmailV2Block: BlockConfig<GmailToolResponse> = {
   type: 'gmail_v2',
   name: 'Gmail',
   hideFromToolbar: false,
+  integrationType: IntegrationType.Email,
+  tags: ['google-workspace', 'messaging'],
   tools: {
     ...GmailBlock.tools,
     access: [

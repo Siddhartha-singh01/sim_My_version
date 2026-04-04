@@ -1,6 +1,7 @@
 import { MicrosoftTeamsIcon } from '@/components/icons'
+import { getScopesForService } from '@/lib/oauth/utils'
 import type { BlockConfig } from '@/blocks/types'
-import { AuthMode } from '@/blocks/types'
+import { AuthMode, IntegrationType } from '@/blocks/types'
 import { normalizeFileInput } from '@/blocks/utils'
 import type { MicrosoftTeamsResponse } from '@/tools/microsoft_teams/types'
 import { getTrigger } from '@/triggers'
@@ -14,6 +15,8 @@ export const MicrosoftTeamsBlock: BlockConfig<MicrosoftTeamsResponse> = {
     'Integrate Microsoft Teams into the workflow. Read, write, update, and delete chat and channel messages. Reply to messages, add reactions, and list team/channel members. Can be used in trigger mode to trigger a workflow when a message is sent to a chat or channel. To mention users in messages, wrap their name in `<at>` tags: `<at>userName</at>`',
   docsLink: 'https://docs.sim.ai/tools/microsoft_teams',
   category: 'tools',
+  integrationType: IntegrationType.Communication,
+  tags: ['messaging', 'microsoft-365'],
   triggerAllowed: true,
   bgColor: '#E0E0E0',
   icon: MicrosoftTeamsIcon,
@@ -47,28 +50,7 @@ export const MicrosoftTeamsBlock: BlockConfig<MicrosoftTeamsResponse> = {
       canonicalParamId: 'oauthCredential',
       mode: 'basic',
       serviceId: 'microsoft-teams',
-      requiredScopes: [
-        'openid',
-        'profile',
-        'email',
-        'User.Read',
-        'Chat.Read',
-        'Chat.ReadWrite',
-        'Chat.ReadBasic',
-        'ChatMessage.Send',
-        'Channel.ReadBasic.All',
-        'ChannelMessage.Send',
-        'ChannelMessage.Read.All',
-        'ChannelMessage.ReadWrite',
-        'ChannelMember.Read.All',
-        'Group.Read.All',
-        'Group.ReadWrite.All',
-        'Team.ReadBasic.All',
-        'TeamMember.Read.All',
-        'offline_access',
-        'Files.Read',
-        'Sites.Read.All',
-      ],
+      requiredScopes: getScopesForService('microsoft-teams'),
       placeholder: 'Select Microsoft account',
       required: true,
     },

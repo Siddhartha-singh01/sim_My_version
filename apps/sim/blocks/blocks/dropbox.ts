@@ -1,6 +1,7 @@
 import { DropboxIcon } from '@/components/icons'
+import { getScopesForService } from '@/lib/oauth/utils'
 import type { BlockConfig } from '@/blocks/types'
-import { AuthMode } from '@/blocks/types'
+import { AuthMode, IntegrationType } from '@/blocks/types'
 import { normalizeFileInput } from '@/blocks/utils'
 import type { DropboxResponse } from '@/tools/dropbox/types'
 
@@ -13,6 +14,8 @@ export const DropboxBlock: BlockConfig<DropboxResponse> = {
     'Integrate Dropbox into your workflow for file management, sharing, and collaboration. Upload files, download content, create folders, manage shared links, and more.',
   docsLink: 'https://docs.sim.ai/tools/dropbox',
   category: 'tools',
+  integrationType: IntegrationType.FileStorage,
+  tags: ['cloud', 'document-processing'],
   icon: DropboxIcon,
   bgColor: '#0061FF',
   subBlocks: [
@@ -41,15 +44,7 @@ export const DropboxBlock: BlockConfig<DropboxResponse> = {
       canonicalParamId: 'oauthCredential',
       mode: 'basic',
       serviceId: 'dropbox',
-      requiredScopes: [
-        'account_info.read',
-        'files.metadata.read',
-        'files.metadata.write',
-        'files.content.read',
-        'files.content.write',
-        'sharing.read',
-        'sharing.write',
-      ],
+      requiredScopes: getScopesForService('dropbox'),
       placeholder: 'Select Dropbox account',
       required: true,
     },

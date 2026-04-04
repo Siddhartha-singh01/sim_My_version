@@ -1,6 +1,7 @@
 import { WealthboxIcon } from '@/components/icons'
+import { getScopesForService } from '@/lib/oauth/utils'
 import type { BlockConfig } from '@/blocks/types'
-import { AuthMode } from '@/blocks/types'
+import { AuthMode, IntegrationType } from '@/blocks/types'
 import type { WealthboxResponse } from '@/tools/wealthbox/types'
 
 export const WealthboxBlock: BlockConfig<WealthboxResponse> = {
@@ -12,6 +13,8 @@ export const WealthboxBlock: BlockConfig<WealthboxResponse> = {
     'Integrate Wealthbox into the workflow. Can read and write notes, read and write contacts, and read and write tasks.',
   docsLink: 'https://docs.sim.ai/tools/wealthbox',
   category: 'tools',
+  integrationType: IntegrationType.CRM,
+  tags: ['sales-engagement', 'customer-support'],
   bgColor: '#E0E0E0',
   icon: WealthboxIcon,
   subBlocks: [
@@ -36,7 +39,7 @@ export const WealthboxBlock: BlockConfig<WealthboxResponse> = {
       canonicalParamId: 'oauthCredential',
       mode: 'basic',
       serviceId: 'wealthbox',
-      requiredScopes: ['login', 'data'],
+      requiredScopes: getScopesForService('wealthbox'),
       placeholder: 'Select Wealthbox account',
       required: true,
     },
@@ -62,7 +65,7 @@ export const WealthboxBlock: BlockConfig<WealthboxResponse> = {
       type: 'file-selector',
       serviceId: 'wealthbox',
       selectorKey: 'wealthbox.contacts',
-      requiredScopes: ['login', 'data'],
+      requiredScopes: getScopesForService('wealthbox'),
       placeholder: 'Enter Contact ID',
       mode: 'basic',
       canonicalParamId: 'contactId',

@@ -1,6 +1,7 @@
 import { JiraIcon } from '@/components/icons'
+import { getScopesForService } from '@/lib/oauth/utils'
 import type { BlockConfig } from '@/blocks/types'
-import { AuthMode } from '@/blocks/types'
+import { AuthMode, IntegrationType } from '@/blocks/types'
 import { normalizeFileInput } from '@/blocks/utils'
 import type { JiraResponse } from '@/tools/jira/types'
 import { getTrigger } from '@/triggers'
@@ -15,6 +16,8 @@ export const JiraBlock: BlockConfig<JiraResponse> = {
     'Integrate Jira into the workflow. Can read, write, and update issues. Can also trigger workflows based on Jira webhook events.',
   docsLink: 'https://docs.sim.ai/tools/jira',
   category: 'tools',
+  integrationType: IntegrationType.Productivity,
+  tags: ['project-management', 'ticketing'],
   bgColor: '#E0E0E0',
   icon: JiraIcon,
   subBlocks: [
@@ -46,6 +49,7 @@ export const JiraBlock: BlockConfig<JiraResponse> = {
         { label: 'Add Watcher', id: 'add_watcher' },
         { label: 'Remove Watcher', id: 'remove_watcher' },
         { label: 'Get Users', id: 'get_users' },
+        { label: 'Search Users', id: 'search_users' },
       ],
       value: () => 'read',
     },
@@ -64,38 +68,7 @@ export const JiraBlock: BlockConfig<JiraResponse> = {
       mode: 'basic',
       required: true,
       serviceId: 'jira',
-      requiredScopes: [
-        'read:jira-work',
-        'read:jira-user',
-        'write:jira-work',
-        'read:issue-event:jira',
-        'write:issue:jira',
-        'read:project:jira',
-        'read:issue-type:jira',
-        'read:me',
-        'offline_access',
-        'read:issue-meta:jira',
-        'read:issue-security-level:jira',
-        'read:issue.vote:jira',
-        'read:issue.changelog:jira',
-        'read:avatar:jira',
-        'read:issue:jira',
-        'read:status:jira',
-        'read:user:jira',
-        'read:field-configuration:jira',
-        'read:issue-details:jira',
-        'delete:issue:jira',
-        'write:comment:jira',
-        'read:comment:jira',
-        'delete:comment:jira',
-        'read:attachment:jira',
-        'delete:attachment:jira',
-        'write:issue-worklog:jira',
-        'read:issue-worklog:jira',
-        'delete:issue-worklog:jira',
-        'write:issue-link:jira',
-        'delete:issue-link:jira',
-      ],
+      requiredScopes: getScopesForService('jira'),
       placeholder: 'Select Jira account',
     },
     {
@@ -194,7 +167,7 @@ export const JiraBlock: BlockConfig<JiraResponse> = {
       type: 'short-input',
       canonicalParamId: 'issueKey',
       placeholder: 'Enter Jira issue key',
-      dependsOn: ['credential', 'domain', 'projectId', 'manualProjectId'],
+      dependsOn: ['credential', 'domain'],
       condition: {
         field: 'operation',
         value: [
@@ -703,6 +676,31 @@ Return ONLY the comment text - no explanations.`,
       placeholder: 'Maximum users to return (default: 50)',
       condition: { field: 'operation', value: 'get_users' },
     },
+    // Search Users fields
+    {
+      id: 'searchUsersQuery',
+      title: 'Search Query',
+      type: 'short-input',
+      required: true,
+      placeholder: 'Enter email address or display name to search',
+      condition: { field: 'operation', value: 'search_users' },
+    },
+    {
+      id: 'searchUsersMaxResults',
+      title: 'Max Results',
+      type: 'short-input',
+      placeholder: 'Maximum users to return (default: 50)',
+      condition: { field: 'operation', value: 'search_users' },
+      mode: 'advanced',
+    },
+    {
+      id: 'searchUsersStartAt',
+      title: 'Start At',
+      type: 'short-input',
+      placeholder: 'Pagination start index (default: 0)',
+      condition: { field: 'operation', value: 'search_users' },
+      mode: 'advanced',
+    },
     // Trigger SubBlocks
     ...getTrigger('jira_issue_created').subBlocks,
     ...getTrigger('jira_issue_updated').subBlocks,
@@ -737,6 +735,7 @@ Return ONLY the comment text - no explanations.`,
       'jira_add_watcher',
       'jira_remove_watcher',
       'jira_get_users',
+      'jira_search_users',
     ],
     config: {
       tool: (params) => {
@@ -797,6 +796,8 @@ Return ONLY the comment text - no explanations.`,
             return 'jira_remove_watcher'
           case 'get_users':
             return 'jira_get_users'
+          case 'search_users':
+            return 'jira_search_users'
           default:
             return 'jira_retrieve'
         }
@@ -1053,6 +1054,18 @@ Return ONLY the comment text - no explanations.`,
                 : undefined,
             }
           }
+          case 'search_users': {
+            return {
+              ...baseParams,
+              query: params.searchUsersQuery,
+              maxResults: params.searchUsersMaxResults
+                ? Number.parseInt(params.searchUsersMaxResults)
+                : undefined,
+              startAt: params.searchUsersStartAt
+                ? Number.parseInt(params.searchUsersStartAt)
+                : undefined,
+            }
+          }
           default:
             return baseParams
         }
@@ -1132,6 +1145,13 @@ Return ONLY the comment text - no explanations.`,
     },
     usersStartAt: { type: 'string', description: 'Pagination start index for users' },
     usersMaxResults: { type: 'string', description: 'Maximum users to return' },
+    // Search Users operation inputs
+    searchUsersQuery: {
+      type: 'string',
+      description: 'Search query (email address or display name)',
+    },
+    searchUsersMaxResults: { type: 'string', description: 'Maximum users to return from search' },
+    searchUsersStartAt: { type: 'string', description: 'Pagination start index for user search' },
   },
   outputs: {
     // Common outputs across all Jira operations

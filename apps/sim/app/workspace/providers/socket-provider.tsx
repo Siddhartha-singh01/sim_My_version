@@ -12,9 +12,10 @@ import {
 } from 'react'
 import { createLogger } from '@sim/logger'
 import { useParams } from 'next/navigation'
-import { io, type Socket } from 'socket.io-client'
+import type { Socket } from 'socket.io-client'
 import { getEnv } from '@/lib/core/config/env'
 import { useOperationQueueStore } from '@/stores/operation-queue/store'
+import { useWorkflowRegistry as useWorkflowRegistryStore } from '@/stores/workflows/registry/store'
 
 const logger = createLogger('SocketContext')
 
@@ -89,6 +90,7 @@ interface SocketContextType {
   onSelectionUpdate: (handler: (data: any) => void) => void
   onWorkflowDeleted: (handler: (data: any) => void) => void
   onWorkflowReverted: (handler: (data: any) => void) => void
+  onWorkflowUpdated: (handler: (data: any) => void) => void
   onOperationConfirmed: (handler: (data: any) => void) => void
   onOperationFailed: (handler: (data: any) => void) => void
 }
@@ -117,6 +119,7 @@ const SocketContext = createContext<SocketContextType>({
   onSelectionUpdate: () => {},
   onWorkflowDeleted: () => {},
   onWorkflowReverted: () => {},
+  onWorkflowUpdated: () => {},
   onOperationConfirmed: () => {},
   onOperationFailed: () => {},
 })
@@ -154,6 +157,7 @@ export function SocketProvider({ children, user }: SocketProviderProps) {
     selectionUpdate?: (data: any) => void
     workflowDeleted?: (data: any) => void
     workflowReverted?: (data: any) => void
+    workflowUpdated?: (data: any) => void
     operationConfirmed?: (data: any) => void
     operationFailed?: (data: any) => void
   }>({})
@@ -197,8 +201,9 @@ export function SocketProvider({ children, user }: SocketProviderProps) {
     initializedRef.current = true
     setIsConnecting(true)
 
-    const initializeSocket = () => {
+    const initializeSocket = async () => {
       try {
+        const { io } = await import('socket.io-client')
         const socketUrl = getEnv('NEXT_PUBLIC_SOCKET_URL') || 'http://localhost:3002'
 
         logger.info('Attempting to connect to Socket.IO server', {
@@ -332,7 +337,7 @@ export function SocketProvider({ children, user }: SocketProviderProps) {
         socketInstance.on('join-workflow-success', ({ workflowId, presenceUsers }) => {
           isRejoiningRef.current = false
           // Ignore stale success responses from previous navigation
-          if (workflowId !== urlWorkflowIdRef.current) {
+          if (urlWorkflowIdRef.current && workflowId !== urlWorkflowIdRef.current) {
             logger.debug(`Ignoring stale join-workflow-success for ${workflowId}`)
             return
           }
@@ -380,19 +385,22 @@ export function SocketProvider({ children, user }: SocketProviderProps) {
           eventHandlers.current.workflowReverted?.(data)
         })
 
+        socketInstance.on('workflow-updated', (data) => {
+          logger.info(`Workflow ${data.workflowId} has been updated externally`)
+          eventHandlers.current.workflowUpdated?.(data)
+        })
+
         const rehydrateWorkflowStores = async (workflowId: string, workflowState: any) => {
           const [
             { useOperationQueueStore },
             { useWorkflowRegistry },
             { useWorkflowStore },
             { useSubBlockStore },
-            { useWorkflowDiffStore },
           ] = await Promise.all([
             import('@/stores/operation-queue/store'),
             import('@/stores/workflows/registry/store'),
             import('@/stores/workflows/workflow/store'),
             import('@/stores/workflows/subblock/store'),
-            import('@/stores/workflow-diff/store'),
           ])
 
           const { activeWorkflowId } = useWorkflowRegistry.getState()
@@ -424,7 +432,6 @@ export function SocketProvider({ children, user }: SocketProviderProps) {
             loops: workflowState.loops || {},
             parallels: workflowState.parallels || {},
             lastSaved: workflowState.lastSaved || Date.now(),
-            deploymentStatuses: workflowState.deploymentStatuses || {},
           })
 
           useSubBlockStore.setState((state: any) => ({
@@ -541,8 +548,12 @@ export function SocketProvider({ children, user }: SocketProviderProps) {
     }
   }, [user?.id, authFailed])
 
+  const hydrationPhase = useWorkflowRegistryStore((s) => s.hydration.phase)
+
   useEffect(() => {
     if (!socket || !isConnected || !urlWorkflowId) return
+
+    if (hydrationPhase === 'creating') return
 
     // Skip if already in the correct room
     if (currentWorkflowId === urlWorkflowId) return
@@ -561,7 +572,7 @@ export function SocketProvider({ children, user }: SocketProviderProps) {
       workflowId: urlWorkflowId,
       tabSessionId: getTabSessionId(),
     })
-  }, [socket, isConnected, urlWorkflowId, currentWorkflowId])
+  }, [socket, isConnected, urlWorkflowId, currentWorkflowId, hydrationPhase])
 
   const joinWorkflow = useCallback(
     (workflowId: string) => {
@@ -800,6 +811,10 @@ export function SocketProvider({ children, user }: SocketProviderProps) {
     eventHandlers.current.workflowReverted = handler
   }, [])
 
+  const onWorkflowUpdated = useCallback((handler: (data: any) => void) => {
+    eventHandlers.current.workflowUpdated = handler
+  }, [])
+
   const onOperationConfirmed = useCallback((handler: (data: any) => void) => {
     eventHandlers.current.operationConfirmed = handler
   }, [])
@@ -833,6 +848,7 @@ export function SocketProvider({ children, user }: SocketProviderProps) {
       onSelectionUpdate,
       onWorkflowDeleted,
       onWorkflowReverted,
+      onWorkflowUpdated,
       onOperationConfirmed,
       onOperationFailed,
     }),
@@ -860,6 +876,7 @@ export function SocketProvider({ children, user }: SocketProviderProps) {
       onSelectionUpdate,
       onWorkflowDeleted,
       onWorkflowReverted,
+      onWorkflowUpdated,
       onOperationConfirmed,
       onOperationFailed,
     ]

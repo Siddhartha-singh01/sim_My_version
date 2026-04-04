@@ -1,6 +1,6 @@
 import { memo, useCallback, useEffect, useMemo, useRef } from 'react'
 import { createLogger } from '@sim/logger'
-import isEqual from 'lodash/isEqual'
+import { isEqual } from 'es-toolkit'
 import { useParams } from 'next/navigation'
 import { Handle, type NodeProps, Position, useUpdateNodeInternals } from 'reactflow'
 import { useStoreWithEqualityFn } from 'zustand/traditional'
@@ -11,11 +11,13 @@ import { createMcpToolId } from '@/lib/mcp/shared'
 import { getProviderIdFromServiceId } from '@/lib/oauth'
 import type { FilterRule, SortRule } from '@/lib/table/types'
 import { BLOCK_DIMENSIONS, HANDLE_POSITIONS } from '@/lib/workflows/blocks/block-dimensions'
+import { getConditionRows, getRouterRows } from '@/lib/workflows/dynamic-handle-topology'
 import {
   buildCanonicalIndex,
   evaluateSubBlockCondition,
   hasAdvancedValues,
   isSubBlockFeatureEnabled,
+  isSubBlockHidden,
   isSubBlockVisibleForMode,
   resolveDependencyValue,
 } from '@/lib/workflows/subblocks/visibility'
@@ -38,15 +40,15 @@ import { SELECTOR_TYPES_HYDRATION_REQUIRED, type SubBlockConfig } from '@/blocks
 import { getDependsOnFields } from '@/blocks/utils'
 import { useKnowledgeBase } from '@/hooks/kb/use-knowledge'
 import { useCustomTools } from '@/hooks/queries/custom-tools'
+import { useDeployWorkflow } from '@/hooks/queries/deployments'
 import { useMcpServers, useMcpToolsQuery } from '@/hooks/queries/mcp'
-import { useCredentialName } from '@/hooks/queries/oauth-credentials'
+import { useCredentialName } from '@/hooks/queries/oauth/oauth-credentials'
 import { useReactivateSchedule, useScheduleInfo } from '@/hooks/queries/schedules'
 import { useSkills } from '@/hooks/queries/skills'
 import { useTablesList } from '@/hooks/queries/tables'
-import { useDeployChildWorkflow } from '@/hooks/queries/workflows'
+import { useWorkflowMap } from '@/hooks/queries/workflows'
 import { useSelectorDisplayName } from '@/hooks/use-selector-display-name'
-import { useVariablesStore } from '@/stores/panel'
-import { useWorkflowRegistry } from '@/stores/workflows/registry/store'
+import { useVariablesStore } from '@/stores/variables/store'
 import { useSubBlockStore } from '@/stores/workflows/subblock/store'
 import { useWorkflowStore } from '@/stores/workflows/workflow/store'
 import { wouldCreateCycle } from '@/stores/workflows/workflow/utils'
@@ -549,21 +551,48 @@ const SubBlockRow = memo(function SubBlockRow({
     return typeof option === 'string' ? option : option.label
   }, [subBlock, rawValue])
 
-  const domainValue = getStringValue('domain')
-  const teamIdValue = getStringValue('teamId')
-  const projectIdValue = getStringValue('projectId')
-  const planIdValue = getStringValue('planId')
+  const resolveContextValue = useCallback(
+    (key: string): string | undefined => {
+      const resolved = resolveDependencyValue(
+        key,
+        rawValues,
+        canonicalIndex || buildCanonicalIndex([]),
+        canonicalModeOverrides
+      )
+      return typeof resolved === 'string' && resolved.length > 0 ? resolved : undefined
+    },
+    [rawValues, canonicalIndex, canonicalModeOverrides]
+  )
+
+  const domainValue = resolveContextValue('domain')
+  const teamIdValue = resolveContextValue('teamId')
+  const projectIdValue = resolveContextValue('projectId')
+  const planIdValue = resolveContextValue('planId')
+  const baseIdValue = resolveContextValue('baseId')
+  const datasetIdValue = resolveContextValue('datasetId')
+  const serviceDeskIdValue = resolveContextValue('serviceDeskId')
+  const siteIdValue = resolveContextValue('siteId')
+  const collectionIdValue = resolveContextValue('collectionId')
+  const spreadsheetIdValue = resolveContextValue('spreadsheetId')
+  const fileIdValue = resolveContextValue('fileId')
 
   const { displayName: selectorDisplayName } = useSelectorDisplayName({
     subBlock,
     value: rawValue,
     workflowId,
-    credentialId: typeof credentialId === 'string' ? credentialId : undefined,
+    oauthCredential: typeof credentialId === 'string' ? credentialId : undefined,
     knowledgeBaseId: typeof knowledgeBaseId === 'string' ? knowledgeBaseId : undefined,
     domain: domainValue,
     teamId: teamIdValue,
     projectId: projectIdValue,
     planId: planIdValue,
+    baseId: baseIdValue,
+    datasetId: datasetIdValue,
+    serviceDeskId: serviceDeskIdValue,
+    siteId: siteIdValue,
+    collectionId: collectionIdValue,
+    spreadsheetId: spreadsheetIdValue,
+    fileId: fileIdValue,
   })
 
   const { knowledgeBase: kbForDisplayName } = useKnowledgeBase(
@@ -571,11 +600,11 @@ const SubBlockRow = memo(function SubBlockRow({
   )
   const knowledgeBaseDisplayName = kbForDisplayName?.name ?? null
 
-  const workflowMap = useWorkflowRegistry((state) => state.workflows)
-  const workflowSelectionName =
-    subBlock?.id === 'workflowId' && typeof rawValue === 'string'
-      ? (workflowMap[rawValue]?.name ?? null)
-      : null
+  const { data: workflowMapForLookup = {} } = useWorkflowMap(workspaceId)
+  const workflowSelectionName = useMemo(() => {
+    if (subBlock?.id !== 'workflowId' || typeof rawValue !== 'string') return null
+    return workflowMapForLookup[rawValue]?.name ?? null
+  }, [workflowMapForLookup, subBlock?.id, rawValue])
 
   const { data: mcpServers = [] } = useMcpServers(workspaceId || '')
   const mcpServerDisplayName = useMemo(() => {
@@ -799,9 +828,9 @@ const SubBlockRow = memo(function SubBlockRow({
   const displayValue = maskedValue || hydratedName || (isSelectorType && value ? '-' : value)
 
   return (
-    <div className='flex items-center gap-[8px]'>
+    <div className='flex items-center gap-2'>
       <span
-        className='min-w-0 truncate text-[14px] text-[var(--text-tertiary)] capitalize'
+        className='min-w-0 truncate text-[var(--text-tertiary)] text-sm capitalize'
         title={title}
       >
         {title}
@@ -809,7 +838,7 @@ const SubBlockRow = memo(function SubBlockRow({
       {displayValue !== undefined && (
         <span
           className={cn(
-            'flex-1 truncate text-right text-[14px] text-[var(--text-primary)]',
+            'flex-1 truncate text-right text-[var(--text-primary)] text-sm',
             isMonospaceField && 'font-mono'
           )}
           title={displayValue}
@@ -826,13 +855,14 @@ export const WorkflowBlock = memo(function WorkflowBlock({
   data,
   selected,
 }: NodeProps<WorkflowBlockProps>) {
-  const { type, config, name, isPending } = data
+  const { type, config, name, isPending, isSandbox } = data
 
   const contentRef = useRef<HTMLDivElement>(null)
 
   const params = useParams()
-  const currentWorkflowId = params.workflowId as string
-  const workspaceId = params.workspaceId as string
+  // In sandbox mode pass empty strings so all workspace-scoped queries are disabled
+  const currentWorkflowId = isSandbox ? '' : (params.workflowId as string)
+  const workspaceId = isSandbox ? '' : (params.workspaceId as string)
 
   const {
     currentWorkflow,
@@ -889,7 +919,7 @@ export const WorkflowBlock = memo(function WorkflowBlock({
     data.subBlockValues
   )
 
-  const { mutate: deployChildWorkflow, isPending: isDeploying } = useDeployChildWorkflow()
+  const { mutate: deployChildWorkflow, isPending: isDeploying } = useDeployWorkflow()
 
   const userPermissions = useUserPermissionsContext()
 
@@ -950,6 +980,7 @@ export const WorkflowBlock = memo(function WorkflowBlock({
       if (block.hidden) return false
       if (block.hideFromPreview) return false
       if (!isSubBlockFeatureEnabled(block)) return false
+      if (isSubBlockHidden(block)) return false
 
       const isPureTriggerBlock = config?.triggers?.enabled && config.category === 'triggers'
 
@@ -1022,6 +1053,9 @@ export const WorkflowBlock = memo(function WorkflowBlock({
 
   const subBlockRows = subBlockRowsData.rows
   const subBlockState = subBlockRowsData.stateToUse
+  const topologySubBlocks = data.isPreview
+    ? (data.blockState?.subBlocks ?? {})
+    : (currentStoreBlock?.subBlocks ?? {})
   const effectiveAdvanced = useMemo(() => {
     const rawValues = Object.entries(subBlockState).reduce<Record<string, unknown>>(
       (acc, [key, entry]) => {
@@ -1053,16 +1087,16 @@ export const WorkflowBlock = memo(function WorkflowBlock({
    * Reusable styles and positioning for Handle components.
    */
   const getHandleClasses = (position: 'left' | 'right' | 'top' | 'bottom', isError = false) => {
-    const baseClasses = '!z-[10] !cursor-crosshair !border-none !transition-[colors] !duration-150'
+    const baseClasses = '!z-[0] !cursor-crosshair !border-none !transition-[colors] !duration-150'
     const colorClasses = isError ? '!bg-[var(--text-error)]' : '!bg-[var(--workflow-edge)]'
 
     const positionClasses = {
-      left: '!left-[-8px] !h-5 !w-[7px] !rounded-l-[2px] !rounded-r-none hover:!left-[-11px] hover:!w-[10px] hover:!rounded-l-full',
+      left: '!left-[-8px] !h-5 !w-[7px] !rounded-l-[2px] !rounded-r-none hover-hover:!left-[-11px] hover-hover:!w-[10px] hover-hover:!rounded-l-full',
       right:
-        '!right-[-8px] !h-5 !w-[7px] !rounded-r-[2px] !rounded-l-none hover:!right-[-11px] hover:!w-[10px] hover:!rounded-r-full',
-      top: '!top-[-8px] !h-[7px] !w-5 !rounded-t-[2px] !rounded-b-none hover:!top-[-11px] hover:!h-[10px] hover:!rounded-t-full',
+        '!right-[-8px] !h-5 !w-[7px] !rounded-r-[2px] !rounded-l-none hover-hover:!right-[-11px] hover-hover:!w-[10px] hover-hover:!rounded-r-full',
+      top: '!top-[-8px] !h-[7px] !w-5 !rounded-t-[2px] !rounded-b-none hover-hover:!top-[-11px] hover-hover:!h-[10px] hover-hover:!rounded-t-full',
       bottom:
-        '!bottom-[-8px] !h-[7px] !w-5 !rounded-b-[2px] !rounded-t-none hover:!bottom-[-11px] hover:!h-[10px] hover:!rounded-b-full',
+        '!bottom-[-8px] !h-[7px] !w-5 !rounded-b-[2px] !rounded-t-none hover-hover:!bottom-[-11px] hover-hover:!h-[10px] hover-hover:!rounded-b-full',
     }
 
     return cn(baseClasses, colorClasses, positionClasses[position])
@@ -1081,34 +1115,8 @@ export const WorkflowBlock = memo(function WorkflowBlock({
    */
   const conditionRows = useMemo(() => {
     if (type !== 'condition') return [] as { id: string; title: string; value: string }[]
-
-    const conditionsValue = subBlockState.conditions?.value
-    const raw = typeof conditionsValue === 'string' ? conditionsValue : undefined
-
-    try {
-      if (raw) {
-        const parsed = JSON.parse(raw) as unknown
-        if (Array.isArray(parsed)) {
-          return parsed.map((item: unknown, index: number) => {
-            const conditionItem = item as { id?: string; value?: unknown }
-            const title = index === 0 ? 'if' : index === parsed.length - 1 ? 'else' : 'else if'
-            return {
-              id: conditionItem?.id ?? `${id}-cond-${index}`,
-              title,
-              value: typeof conditionItem?.value === 'string' ? conditionItem.value : '',
-            }
-          })
-        }
-      }
-    } catch (error) {
-      logger.warn('Failed to parse condition subblock value', { error, blockId: id })
-    }
-
-    return [
-      { id: `${id}-if`, title: 'if', value: '' },
-      { id: `${id}-else`, title: 'else', value: '' },
-    ]
-  }, [type, subBlockState, id])
+    return getConditionRows(id, topologySubBlocks.conditions?.value)
+  }, [type, topologySubBlocks, id])
 
   /**
    * Compute per-route rows (id/value) for router_v2 blocks so we can render
@@ -1117,31 +1125,8 @@ export const WorkflowBlock = memo(function WorkflowBlock({
    */
   const routerRows = useMemo(() => {
     if (type !== 'router_v2') return [] as { id: string; value: string }[]
-
-    const routesValue = subBlockState.routes?.value
-    const raw = typeof routesValue === 'string' ? routesValue : undefined
-
-    try {
-      if (raw) {
-        const parsed = JSON.parse(raw) as unknown
-        if (Array.isArray(parsed)) {
-          return parsed.map((item: unknown, index: number) => {
-            const routeItem = item as { id?: string; value?: string }
-            return {
-              // Use stable ID format that matches ConditionInput's generateStableId
-              id: routeItem?.id ?? `${id}-route${index + 1}`,
-              value: routeItem?.value ?? '',
-            }
-          })
-        }
-      }
-    } catch (error) {
-      logger.warn('Failed to parse router routes value', { error, blockId: id })
-    }
-
-    // Fallback must match ConditionInput's default: generateStableId(blockId, 'route1') = `${blockId}-route1`
-    return [{ id: `${id}-route1`, value: '' }]
-  }, [type, subBlockState, id])
+    return getRouterRows(id, topologySubBlocks.routes?.value)
+  }, [type, topologySubBlocks, id])
 
   /**
    * Compute and publish deterministic layout metrics for workflow blocks.
@@ -1210,7 +1195,7 @@ export const WorkflowBlock = memo(function WorkflowBlock({
         ref={contentRef}
         onClick={handleClick}
         className={cn(
-          'workflow-drag-handle relative z-[20] w-[250px] cursor-grab select-none rounded-[8px] border border-[var(--border-1)] bg-[var(--surface-2)] [&:active]:cursor-grabbing'
+          'workflow-drag-handle relative z-[20] w-[250px] cursor-grab select-none rounded-lg border border-[var(--border-1)] bg-[var(--surface-2)] [&:active]:cursor-grabbing'
         )}
       >
         {isPending && (
@@ -1219,7 +1204,7 @@ export const WorkflowBlock = memo(function WorkflowBlock({
           </div>
         )}
 
-        {!data.isPreview && (
+        {!data.isPreview && !data.isEmbedded && (
           <ActionBar blockId={id} blockType={type} disabled={!userPermissions.canEdit} />
         )}
 
@@ -1244,13 +1229,13 @@ export const WorkflowBlock = memo(function WorkflowBlock({
 
         <div
           className={cn(
-            'flex items-center justify-between p-[8px]',
+            'flex items-center justify-between p-2',
             hasContentBelowHeader && 'border-[var(--border-1)] border-b'
           )}
         >
-          <div className='relative z-10 flex min-w-0 flex-1 items-center gap-[10px]'>
+          <div className='relative z-10 flex min-w-0 flex-1 items-center gap-2.5'>
             <div
-              className='flex h-[24px] w-[24px] flex-shrink-0 items-center justify-center rounded-[6px]'
+              className='flex h-[24px] w-[24px] flex-shrink-0 items-center justify-center rounded-md'
               style={{
                 background: isEnabled ? config.bgColor : 'gray',
               }}
@@ -1259,7 +1244,7 @@ export const WorkflowBlock = memo(function WorkflowBlock({
             </div>
             <span
               className={cn(
-                'truncate font-medium text-[16px]',
+                'truncate font-medium text-md',
                 !isEnabled && runPathStatus !== 'success' && 'text-[var(--text-muted)]'
               )}
               title={name}
@@ -1368,7 +1353,7 @@ export const WorkflowBlock = memo(function WorkflowBlock({
               </Tooltip.Root>
             )}
             {/* {isActive && (
-              <div className='mr-[2px] ml-2 flex h-[16px] w-[16px] items-center justify-center'>
+              <div className='mr-0.5 ml-2 flex h-[16px] w-[16px] items-center justify-center'>
                 <div
                   className='h-full w-full animate-spin-slow rounded-full border-[2.5px] border-[rgba(255,102,0,0.25)] border-t-[var(--warning)]'
                   aria-hidden='true'
@@ -1379,7 +1364,7 @@ export const WorkflowBlock = memo(function WorkflowBlock({
         </div>
 
         {hasContentBelowHeader && (
-          <div className='flex flex-col gap-[8px] p-[8px]'>
+          <div className='flex flex-col gap-2 p-2'>
             {type === 'condition' ? (
               conditionRows.map((cond) => (
                 <SubBlockRow key={cond.id} title={cond.title} value={getDisplayValue(cond.value)} />
@@ -1572,9 +1557,7 @@ export const WorkflowBlock = memo(function WorkflowBlock({
           </>
         )}
         {hasRing && (
-          <div
-            className={cn('pointer-events-none absolute inset-0 z-40 rounded-[8px]', ringStyles)}
-          />
+          <div className={cn('pointer-events-none absolute inset-0 z-40 rounded-lg', ringStyles)} />
         )}
       </div>
     </div>

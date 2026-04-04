@@ -1,12 +1,13 @@
 import { createLogger } from '@sim/logger'
+import { buildSelectorContextFromBlock } from '@/lib/workflows/subblocks/context'
 import { getBlock } from '@/blocks/registry'
 import { SELECTOR_TYPES_HYDRATION_REQUIRED, type SubBlockConfig } from '@/blocks/types'
 import { CREDENTIAL_SET, isUuid } from '@/executor/constants'
 import { fetchCredentialSetById } from '@/hooks/queries/credential-sets'
-import { fetchOAuthCredentialDetail } from '@/hooks/queries/oauth-credentials'
+import { fetchOAuthCredentialDetail } from '@/hooks/queries/oauth/oauth-credentials'
 import { getSelectorDefinition } from '@/hooks/selectors/registry'
 import { resolveSelectorForSubBlock } from '@/hooks/selectors/resolution'
-import type { SelectorKey } from '@/hooks/selectors/types'
+import type { SelectorContext, SelectorKey } from '@/hooks/selectors/types'
 import type { WorkflowState } from '@/stores/workflows/workflow/types'
 
 const logger = createLogger('ResolveValues')
@@ -33,77 +34,16 @@ interface ResolutionContext {
   subBlockId: string
   /** The workflow ID for API calls */
   workflowId: string
+  /** The workspace scope for selector-based lookups */
+  workspaceId?: string
   /** The current workflow state for extracting additional context */
   currentState: WorkflowState
   /** The block ID being resolved */
   blockId?: string
 }
 
-/**
- * Extended context extracted from block subBlocks for selector resolution
- */
-interface ExtendedSelectorContext {
-  credentialId?: string
-  domain?: string
-  projectId?: string
-  planId?: string
-  teamId?: string
-  knowledgeBaseId?: string
-  siteId?: string
-  collectionId?: string
-  spreadsheetId?: string
-}
-
-function getSemanticFallback(subBlockId: string, subBlockConfig?: SubBlockConfig): string {
-  if (subBlockConfig?.title) {
-    return subBlockConfig.title.toLowerCase()
-  }
-
-  const patterns: Record<string, string> = {
-    credential: 'credential',
-    channel: 'channel',
-    channelId: 'channel',
-    user: 'user',
-    userId: 'user',
-    workflow: 'workflow',
-    workflowId: 'workflow',
-    file: 'file',
-    fileId: 'file',
-    folder: 'folder',
-    folderId: 'folder',
-    project: 'project',
-    projectId: 'project',
-    team: 'team',
-    teamId: 'team',
-    sheet: 'sheet',
-    sheetId: 'sheet',
-    document: 'document',
-    documentId: 'document',
-    knowledgeBase: 'knowledge base',
-    knowledgeBaseId: 'knowledge base',
-    server: 'server',
-    serverId: 'server',
-    tool: 'tool',
-    toolId: 'tool',
-    calendar: 'calendar',
-    calendarId: 'calendar',
-    label: 'label',
-    labelId: 'label',
-    site: 'site',
-    siteId: 'site',
-    collection: 'collection',
-    collectionId: 'collection',
-    item: 'item',
-    itemId: 'item',
-    contact: 'contact',
-    contactId: 'contact',
-    task: 'task',
-    taskId: 'task',
-    chat: 'chat',
-    chatId: 'chat',
-  }
-
-  return patterns[subBlockId] || 'value'
+function getSemanticFallback(subBlockConfig: SubBlockConfig): string {
+  return (subBlockConfig.title ?? subBlockConfig.id).toLowerCase()
 }
 
 async function resolveCredential(credentialId: string, workflowId: string): Promise<string | null> {
@@ -126,13 +66,15 @@ async function resolveCredential(credentialId: string, workflowId: string): Prom
   }
 }
 
-async function resolveWorkflow(workflowId: string): Promise<string | null> {
+async function resolveWorkflow(workflowId: string, workspaceId?: string): Promise<string | null> {
+  if (!workspaceId) return null
+
   try {
     const definition = getSelectorDefinition('sim.workflows')
     if (definition.fetchById) {
       const result = await definition.fetchById({
         key: 'sim.workflows',
-        context: {},
+        context: { workspaceId },
         detailId: workflowId,
       })
       return result?.label ?? null
@@ -147,23 +89,10 @@ async function resolveWorkflow(workflowId: string): Promise<string | null> {
 async function resolveSelectorValue(
   value: string,
   selectorKey: SelectorKey,
-  extendedContext: ExtendedSelectorContext,
-  workflowId: string
+  selectorContext: SelectorContext
 ): Promise<string | null> {
   try {
     const definition = getSelectorDefinition(selectorKey)
-    const selectorContext = {
-      workflowId,
-      credentialId: extendedContext.credentialId,
-      domain: extendedContext.domain,
-      projectId: extendedContext.projectId,
-      planId: extendedContext.planId,
-      teamId: extendedContext.teamId,
-      knowledgeBaseId: extendedContext.knowledgeBaseId,
-      siteId: extendedContext.siteId,
-      collectionId: extendedContext.collectionId,
-      spreadsheetId: extendedContext.spreadsheetId,
-    }
 
     if (definition.fetchById) {
       const result = await definition.fetchById({
@@ -213,34 +142,15 @@ export function formatValueForDisplay(value: unknown): string {
   return String(value)
 }
 
-/**
- * Extracts extended context from a block's subBlocks for selector resolution.
- * This mirrors the context extraction done in the UI components.
- */
-function extractExtendedContext(
+function extractSelectorContext(
   blockId: string,
-  currentState: WorkflowState
-): ExtendedSelectorContext {
+  currentState: WorkflowState,
+  workflowId: string,
+  workspaceId?: string
+): SelectorContext {
   const block = currentState.blocks?.[blockId]
-  if (!block?.subBlocks) return {}
-
-  const getStringValue = (id: string): string | undefined => {
-    const subBlock = block.subBlocks[id] as { value?: unknown } | undefined
-    const val = subBlock?.value
-    return typeof val === 'string' ? val : undefined
-  }
-
-  return {
-    credentialId: getStringValue('credential'),
-    domain: getStringValue('domain'),
-    projectId: getStringValue('projectId'),
-    planId: getStringValue('planId'),
-    teamId: getStringValue('teamId'),
-    knowledgeBaseId: getStringValue('knowledgeBaseId'),
-    siteId: getStringValue('siteId'),
-    collectionId: getStringValue('collectionId'),
-    spreadsheetId: getStringValue('spreadsheetId') || getStringValue('fileId'),
-  }
+  if (!block?.subBlocks) return { workflowId, workspaceId }
+  return buildSelectorContextFromBlock(block.type, block.subBlocks, { workflowId, workspaceId })
 }
 
 /**
@@ -266,11 +176,19 @@ export async function resolveValueForDisplay(
 
   const blockConfig = getBlock(context.blockType)
   const subBlockConfig = blockConfig?.subBlocks.find((sb) => sb.id === context.subBlockId)
-  const semanticFallback = getSemanticFallback(context.subBlockId, subBlockConfig)
+  if (!subBlockConfig) {
+    return { original: value, displayLabel: formatValueForDisplay(value), resolved: false }
+  }
+  const semanticFallback = getSemanticFallback(subBlockConfig)
 
-  const extendedContext = context.blockId
-    ? extractExtendedContext(context.blockId, context.currentState)
-    : {}
+  const selectorCtx = context.blockId
+    ? extractSelectorContext(
+        context.blockId,
+        context.currentState,
+        context.workflowId,
+        context.workspaceId
+      )
+    : { workflowId: context.workflowId, workspaceId: context.workspaceId }
 
   // Credential fields (oauth-input or credential subBlockId)
   const isCredentialField =
@@ -286,7 +204,7 @@ export async function resolveValueForDisplay(
 
   // Workflow selector
   if (subBlockConfig?.type === 'workflow-selector' && isUuid(value)) {
-    const label = await resolveWorkflow(value)
+    const label = await resolveWorkflow(value, selectorCtx.workspaceId)
     if (label) {
       return { original: value, displayLabel: label, resolved: true }
     }
@@ -302,26 +220,10 @@ export async function resolveValueForDisplay(
   // Selector types that require hydration (file-selector, sheet-selector, etc.)
   // These support external service IDs like Google Drive file IDs
   if (subBlockConfig && SELECTOR_TYPES_HYDRATION_REQUIRED.includes(subBlockConfig.type)) {
-    const resolution = resolveSelectorForSubBlock(subBlockConfig, {
-      workflowId: context.workflowId,
-      credentialId: extendedContext.credentialId,
-      domain: extendedContext.domain,
-      projectId: extendedContext.projectId,
-      planId: extendedContext.planId,
-      teamId: extendedContext.teamId,
-      knowledgeBaseId: extendedContext.knowledgeBaseId,
-      siteId: extendedContext.siteId,
-      collectionId: extendedContext.collectionId,
-      spreadsheetId: extendedContext.spreadsheetId,
-    })
+    const resolution = resolveSelectorForSubBlock(subBlockConfig, selectorCtx)
 
     if (resolution?.key) {
-      const label = await resolveSelectorValue(
-        value,
-        resolution.key,
-        extendedContext,
-        context.workflowId
-      )
+      const label = await resolveSelectorValue(value, resolution.key, selectorCtx)
       if (label) {
         return { original: value, displayLabel: label, resolved: true }
       }

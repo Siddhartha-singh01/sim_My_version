@@ -1,7 +1,8 @@
 import { GoogleCalendarIcon } from '@/components/icons'
+import { getScopesForService } from '@/lib/oauth/utils'
 import type { BlockConfig } from '@/blocks/types'
-import { AuthMode } from '@/blocks/types'
-import { createVersionedToolSelector } from '@/blocks/utils'
+import { AuthMode, IntegrationType } from '@/blocks/types'
+import { createVersionedToolSelector, SERVICE_ACCOUNT_SUBBLOCKS } from '@/blocks/utils'
 import type { GoogleCalendarResponse } from '@/tools/google_calendar/types'
 
 export const GoogleCalendarBlock: BlockConfig<GoogleCalendarResponse> = {
@@ -13,6 +14,8 @@ export const GoogleCalendarBlock: BlockConfig<GoogleCalendarResponse> = {
     'Integrate Google Calendar into the workflow. Can create, read, update, and list calendar events.',
   docsLink: 'https://docs.sim.ai/tools/google_calendar',
   category: 'tools',
+  integrationType: IntegrationType.Productivity,
+  tags: ['calendar', 'scheduling', 'google-workspace'],
   bgColor: '#E0E0E0',
   icon: GoogleCalendarIcon,
   hideFromToolbar: true,
@@ -43,7 +46,7 @@ export const GoogleCalendarBlock: BlockConfig<GoogleCalendarResponse> = {
       mode: 'basic',
       required: true,
       serviceId: 'google-calendar',
-      requiredScopes: ['https://www.googleapis.com/auth/calendar'],
+      requiredScopes: getScopesForService('google-calendar'),
       placeholder: 'Select Google Calendar account',
     },
     {
@@ -55,6 +58,7 @@ export const GoogleCalendarBlock: BlockConfig<GoogleCalendarResponse> = {
       placeholder: 'Enter credential ID',
       required: true,
     },
+    ...SERVICE_ACCOUNT_SUBBLOCKS,
     // Calendar selector (basic mode) - not needed for list_calendars
     {
       id: 'calendarId',
@@ -64,7 +68,7 @@ export const GoogleCalendarBlock: BlockConfig<GoogleCalendarResponse> = {
       serviceId: 'google-calendar',
       selectorKey: 'google.calendar',
       selectorAllowSearch: false,
-      requiredScopes: ['https://www.googleapis.com/auth/calendar'],
+      requiredScopes: getScopesForService('google-calendar'),
       placeholder: 'Select calendar',
       dependsOn: ['credential'],
       mode: 'basic',
@@ -330,7 +334,7 @@ Return ONLY the timestamp string - no explanations, no quotes, no extra text.`,
       serviceId: 'google-calendar',
       selectorKey: 'google.calendar',
       selectorAllowSearch: false,
-      requiredScopes: ['https://www.googleapis.com/auth/calendar'],
+      requiredScopes: getScopesForService('google-calendar'),
       placeholder: 'Select destination calendar',
       dependsOn: ['credential'],
       condition: { field: 'operation', value: 'move' },
@@ -647,6 +651,8 @@ export const GoogleCalendarV2Block: BlockConfig<GoogleCalendarResponse> = {
   type: 'google_calendar_v2',
   name: 'Google Calendar',
   hideFromToolbar: false,
+  integrationType: IntegrationType.Productivity,
+  tags: ['calendar', 'scheduling', 'google-workspace'],
   tools: {
     ...GoogleCalendarBlock.tools,
     access: [

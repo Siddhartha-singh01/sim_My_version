@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useMemo, useRef } from 'react'
+import { useParams } from 'next/navigation'
 import ReactFlow, {
   ConnectionLineType,
   type Edge,
@@ -19,6 +20,7 @@ import { WorkflowEdge } from '@/app/workspace/[workspaceId]/w/[workflowId]/compo
 import { estimateBlockDimensions } from '@/app/workspace/[workspaceId]/w/[workflowId]/utils'
 import { PreviewBlock } from '@/app/workspace/[workspaceId]/w/components/preview/components/preview-workflow/components/block'
 import { PreviewSubflow } from '@/app/workspace/[workspaceId]/w/components/preview/components/preview-workflow/components/subflow'
+import { useWorkflowMap } from '@/hooks/queries/workflows'
 import type { BlockState, WorkflowState } from '@/stores/workflows/workflow/types'
 
 const logger = createLogger('PreviewWorkflow')
@@ -130,6 +132,7 @@ function calculateAbsolutePosition(
 
 interface PreviewWorkflowProps {
   workflowState: WorkflowState
+  workspaceId?: string
   className?: string
   height?: string | number
   width?: string | number
@@ -145,7 +148,7 @@ interface PreviewWorkflowProps {
   /** Cursor style to show when hovering the canvas */
   cursorStyle?: 'default' | 'pointer' | 'grab'
   /** Map of executed block IDs to their status for highlighting the execution path */
-  executedBlocks?: Record<string, { status: string }>
+  executedBlocks?: Record<string, { status: string; output?: unknown }>
   /** Currently selected block ID for highlighting */
   selectedBlockId?: string | null
   /** Skips expensive subblock computations for thumbnails/template previews */
@@ -213,6 +216,7 @@ function FitViewOnChange({ nodeIds, fitPadding, containerRef }: FitViewOnChangeP
 /** Readonly workflow visualization with execution status highlighting. */
 export function PreviewWorkflow({
   workflowState,
+  workspaceId: propWorkspaceId,
   className,
   height = '100%',
   width = '100%',
@@ -228,6 +232,14 @@ export function PreviewWorkflow({
   selectedBlockId,
   lightweight = false,
 }: PreviewWorkflowProps) {
+  const params = useParams<{ workspaceId: string }>()
+  const workspaceId = propWorkspaceId ?? params.workspaceId
+  const {
+    data: workflowMap = {},
+    isLoading: isWorkflowMapLoading,
+    isPlaceholderData: isWorkflowMapPlaceholderData,
+  } = useWorkflowMap(workspaceId)
+  const workflowLabelsReady = !isWorkflowMapLoading && !isWorkflowMapPlaceholderData
   const containerRef = useRef<HTMLDivElement>(null)
   const nodeTypes = previewNodeTypes
   const isValidWorkflowState = workflowState?.blocks && workflowState.edges
@@ -274,9 +286,9 @@ export function PreviewWorkflow({
 
   /** Maps base block IDs to execution data, handling parallel iteration variants (blockId₍n₎). */
   const blockExecutionMap = useMemo(() => {
-    if (!executedBlocks) return new Map<string, { status: string }>()
+    if (!executedBlocks) return new Map<string, { status: string; output?: unknown }>()
 
-    const map = new Map<string, { status: string }>()
+    const map = new Map<string, { status: string; output?: unknown }>()
     for (const [key, value] of Object.entries(executedBlocks)) {
       // Extract base ID (remove iteration suffix like ₍0₎)
       const baseId = key.includes('₍') ? key.split('₍')[0] : key
@@ -424,6 +436,8 @@ export function PreviewWorkflow({
         data: {
           type: block.type,
           name: block.name,
+          workflowMap,
+          workflowLabelsReady,
           isTrigger: block.triggerMode === true,
           horizontalHandles: block.horizontalHandles ?? false,
           enabled: block.enabled ?? true,
@@ -445,13 +459,14 @@ export function PreviewWorkflow({
     executedBlocks,
     selectedBlockId,
     getSubflowExecutionStatus,
+    workflowMap,
+    workflowLabelsReady,
     lightweight,
   ])
 
   const edges: Edge[] = useMemo(() => {
     if (!isValidWorkflowState) return []
 
-    /** Edge is green if target executed and source condition met by edge type. */
     const getEdgeExecutionStatus = (edge: {
       source: string
       target: string
@@ -463,17 +478,40 @@ export function PreviewWorkflow({
       if (!targetStatus?.executed) return 'not-executed'
 
       const sourceStatus = getBlockExecutionStatus(edge.source)
-      const { sourceHandle } = edge
+      if (!sourceStatus?.executed) return 'not-executed'
 
-      if (sourceHandle === 'error') {
-        return sourceStatus?.status === 'error' ? 'success' : 'not-executed'
+      const handle = edge.sourceHandle
+      if (!handle) {
+        return sourceStatus.status === 'success' ? 'success' : 'not-executed'
       }
 
-      if (sourceHandle === 'loop-start-source' || sourceHandle === 'parallel-start-source') {
-        return 'success'
+      const sourceOutput = blockExecutionMap.get(edge.source)?.output as
+        | Record<string, any>
+        | undefined
+
+      if (handle.startsWith('condition-')) {
+        const conditionValue = handle.substring('condition-'.length)
+        return sourceOutput?.selectedOption === conditionValue ? 'success' : 'not-executed'
       }
 
-      return sourceStatus?.status === 'success' ? 'success' : 'not-executed'
+      if (handle.startsWith('router-')) {
+        const routeId = handle.substring('router-'.length)
+        return sourceOutput?.selectedRoute === routeId ? 'success' : 'not-executed'
+      }
+
+      switch (handle) {
+        case 'error':
+          return sourceStatus.status === 'error' ? 'error' : 'not-executed'
+        case 'source':
+          return sourceStatus.status === 'success' ? 'success' : 'not-executed'
+        case 'loop-start-source':
+        case 'loop-end-source':
+        case 'parallel-start-source':
+        case 'parallel-end-source':
+          return 'success'
+        default:
+          return sourceStatus.status === 'success' ? 'success' : 'not-executed'
+      }
     }
 
     return (workflowState.edges || []).map((edge) => {

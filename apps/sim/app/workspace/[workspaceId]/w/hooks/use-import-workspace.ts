@@ -60,7 +60,11 @@ export function useImportWorkspace({ onSuccess }: UseImportWorkspaceProps = {}) 
         const createResponse = await fetch('/api/workspaces', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ name: workspaceName, skipDefaultWorkflow: true }),
+          body: JSON.stringify({
+            name: workspaceName,
+            ...(metadata?.workspaceColor && { color: metadata.workspaceColor }),
+            skipDefaultWorkflow: true,
+          }),
         })
 
         if (!createResponse.ok) {
@@ -172,6 +176,7 @@ export function useImportWorkspace({ onSuccess }: UseImportWorkspaceProps = {}) 
                 color: workflowColor,
                 workspaceId: newWorkspace.id,
                 folderId: targetFolderId,
+                deduplicate: true,
               }),
             })
 
@@ -238,7 +243,7 @@ export function useImportWorkspace({ onSuccess }: UseImportWorkspaceProps = {}) 
 
         logger.info(`Workspace import complete. Imported ${extractedWorkflows.length} workflows`)
 
-        router.push(`/workspace/${newWorkspace.id}/w`)
+        router.push(`/workspace/${newWorkspace.id}/home`)
 
         onSuccess?.()
       } catch (error) {

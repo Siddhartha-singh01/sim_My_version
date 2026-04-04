@@ -1,12 +1,23 @@
 import { airtableWebhookTrigger } from '@/triggers/airtable'
 import {
+  ashbyApplicationSubmitTrigger,
+  ashbyCandidateDeleteTrigger,
+  ashbyCandidateHireTrigger,
+  ashbyCandidateStageChangeTrigger,
+  ashbyJobCreateTrigger,
+  ashbyOfferCreateTrigger,
+} from '@/triggers/ashby'
+import {
   attioCommentCreatedTrigger,
   attioCommentDeletedTrigger,
   attioCommentResolvedTrigger,
   attioCommentUnresolvedTrigger,
+  attioListCreatedTrigger,
+  attioListDeletedTrigger,
   attioListEntryCreatedTrigger,
   attioListEntryDeletedTrigger,
   attioListEntryUpdatedTrigger,
+  attioListUpdatedTrigger,
   attioNoteCreatedTrigger,
   attioNoteDeletedTrigger,
   attioNoteUpdatedTrigger,
@@ -18,6 +29,7 @@ import {
   attioTaskDeletedTrigger,
   attioTaskUpdatedTrigger,
   attioWebhookTrigger,
+  attioWorkspaceMemberCreatedTrigger,
 } from '@/triggers/attio'
 import {
   calcomBookingCancelledTrigger,
@@ -59,6 +71,7 @@ import {
   confluenceSpaceUpdatedTrigger,
   confluenceWebhookTrigger,
 } from '@/triggers/confluence'
+import { fathomNewMeetingTrigger, fathomWebhookTrigger } from '@/triggers/fathom'
 import { firefliesTranscriptionCompleteTrigger } from '@/triggers/fireflies'
 import { genericWebhookTrigger } from '@/triggers/generic'
 import {
@@ -80,6 +93,8 @@ import { googleFormsWebhookTrigger } from '@/triggers/googleforms'
 import {
   grainHighlightCreatedTrigger,
   grainHighlightUpdatedTrigger,
+  grainItemAddedTrigger,
+  grainItemUpdatedTrigger,
   grainRecordingCreatedTrigger,
   grainRecordingUpdatedTrigger,
   grainStoryCreatedTrigger,
@@ -165,6 +180,12 @@ import { whatsappWebhookTrigger } from '@/triggers/whatsapp'
 export const TRIGGER_REGISTRY: TriggerRegistry = {
   slack_webhook: slackWebhookTrigger,
   airtable_webhook: airtableWebhookTrigger,
+  ashby_application_submit: ashbyApplicationSubmitTrigger,
+  ashby_candidate_stage_change: ashbyCandidateStageChangeTrigger,
+  ashby_candidate_hire: ashbyCandidateHireTrigger,
+  ashby_candidate_delete: ashbyCandidateDeleteTrigger,
+  ashby_job_create: ashbyJobCreateTrigger,
+  ashby_offer_create: ashbyOfferCreateTrigger,
   attio_webhook: attioWebhookTrigger,
   attio_record_created: attioRecordCreatedTrigger,
   attio_record_updated: attioRecordUpdatedTrigger,
@@ -183,6 +204,10 @@ export const TRIGGER_REGISTRY: TriggerRegistry = {
   attio_list_entry_created: attioListEntryCreatedTrigger,
   attio_list_entry_updated: attioListEntryUpdatedTrigger,
   attio_list_entry_deleted: attioListEntryDeletedTrigger,
+  attio_list_created: attioListCreatedTrigger,
+  attio_list_updated: attioListUpdatedTrigger,
+  attio_list_deleted: attioListDeletedTrigger,
+  attio_workspace_member_created: attioWorkspaceMemberCreatedTrigger,
   calendly_webhook: calendlyWebhookTrigger,
   calendly_invitee_created: calendlyInviteeCreatedTrigger,
   calendly_invitee_canceled: calendlyInviteeCanceledTrigger,
@@ -226,8 +251,12 @@ export const TRIGGER_REGISTRY: TriggerRegistry = {
   github_release_published: githubReleasePublishedTrigger,
   github_workflow_run: githubWorkflowRunTrigger,
   fireflies_transcription_complete: firefliesTranscriptionCompleteTrigger,
+  fathom_new_meeting: fathomNewMeetingTrigger,
+  fathom_webhook: fathomWebhookTrigger,
   gmail_poller: gmailPollingTrigger,
   grain_webhook: grainWebhookTrigger,
+  grain_item_added: grainItemAddedTrigger,
+  grain_item_updated: grainItemUpdatedTrigger,
   grain_recording_created: grainRecordingCreatedTrigger,
   grain_recording_updated: grainRecordingUpdatedTrigger,
   grain_highlight_created: grainHighlightCreatedTrigger,

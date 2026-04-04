@@ -26,6 +26,11 @@ export const AuditAction = {
   CHAT_UPDATED: 'chat.updated',
   CHAT_DELETED: 'chat.deleted',
 
+  // Custom Tools
+  CUSTOM_TOOL_CREATED: 'custom_tool.created',
+  CUSTOM_TOOL_UPDATED: 'custom_tool.updated',
+  CUSTOM_TOOL_DELETED: 'custom_tool.deleted',
+
   // Billing
   CREDIT_PURCHASED: 'credit.purchased',
 
@@ -40,6 +45,10 @@ export const AuditAction = {
   CREDENTIAL_SET_INVITATION_RESENT: 'credential_set_invitation.resent',
   CREDENTIAL_SET_INVITATION_REVOKED: 'credential_set_invitation.revoked',
 
+  // Connector Documents
+  CONNECTOR_DOCUMENT_RESTORED: 'connector_document.restored',
+  CONNECTOR_DOCUMENT_EXCLUDED: 'connector_document.excluded',
+
   // Documents
   DOCUMENT_UPLOADED: 'document.uploaded',
   DOCUMENT_UPDATED: 'document.updated',
@@ -50,7 +59,9 @@ export const AuditAction = {
 
   // Files
   FILE_UPLOADED: 'file.uploaded',
+  FILE_UPDATED: 'file.updated',
   FILE_DELETED: 'file.deleted',
+  FILE_RESTORED: 'file.restored',
 
   // Folders
   FOLDER_CREATED: 'folder.created',
@@ -66,10 +77,17 @@ export const AuditAction = {
   INVITATION_ACCEPTED: 'invitation.accepted',
   INVITATION_REVOKED: 'invitation.revoked',
 
+  // Knowledge Base Connectors
+  CONNECTOR_CREATED: 'connector.created',
+  CONNECTOR_UPDATED: 'connector.updated',
+  CONNECTOR_DELETED: 'connector.deleted',
+  CONNECTOR_SYNCED: 'connector.synced',
+
   // Knowledge Bases
   KNOWLEDGE_BASE_CREATED: 'knowledge_base.created',
   KNOWLEDGE_BASE_UPDATED: 'knowledge_base.updated',
   KNOWLEDGE_BASE_DELETED: 'knowledge_base.deleted',
+  KNOWLEDGE_BASE_RESTORED: 'knowledge_base.restored',
 
   // MCP Servers
   MCP_SERVER_ADDED: 'mcp_server.added',
@@ -86,8 +104,10 @@ export const AuditAction = {
   NOTIFICATION_UPDATED: 'notification.updated',
   NOTIFICATION_DELETED: 'notification.deleted',
 
-  // OAuth
+  // OAuth / Credentials
   OAUTH_DISCONNECTED: 'oauth.disconnected',
+  CREDENTIAL_RENAMED: 'credential.renamed',
+  CREDENTIAL_DELETED: 'credential.deleted',
 
   // Password
   PASSWORD_RESET: 'password.reset',
@@ -111,8 +131,19 @@ export const AuditAction = {
   PERMISSION_GROUP_MEMBER_ADDED: 'permission_group_member.added',
   PERMISSION_GROUP_MEMBER_REMOVED: 'permission_group_member.removed',
 
+  // Skills
+  SKILL_CREATED: 'skill.created',
+  SKILL_UPDATED: 'skill.updated',
+  SKILL_DELETED: 'skill.deleted',
+
   // Schedules
   SCHEDULE_UPDATED: 'schedule.updated',
+
+  // Tables
+  TABLE_CREATED: 'table.created',
+  TABLE_UPDATED: 'table.updated',
+  TABLE_DELETED: 'table.deleted',
+  TABLE_RESTORED: 'table.restored',
 
   // Templates
   TEMPLATE_CREATED: 'template.created',
@@ -126,6 +157,7 @@ export const AuditAction = {
   // Workflows
   WORKFLOW_CREATED: 'workflow.created',
   WORKFLOW_DELETED: 'workflow.deleted',
+  WORKFLOW_RESTORED: 'workflow.restored',
   WORKFLOW_DEPLOYED: 'workflow.deployed',
   WORKFLOW_UNDEPLOYED: 'workflow.undeployed',
   WORKFLOW_DUPLICATED: 'workflow.duplicated',
@@ -151,7 +183,9 @@ export const AuditResourceType = {
   BILLING: 'billing',
   BYOK_KEY: 'byok_key',
   CHAT: 'chat',
+  CONNECTOR: 'connector',
   CREDENTIAL_SET: 'credential_set',
+  CUSTOM_TOOL: 'custom_tool',
   DOCUMENT: 'document',
   ENVIRONMENT: 'environment',
   FILE: 'file',
@@ -165,6 +199,8 @@ export const AuditResourceType = {
   PASSWORD: 'password',
   PERMISSION_GROUP: 'permission_group',
   SCHEDULE: 'schedule',
+  SKILL: 'skill',
+  TABLE: 'table',
   TEMPLATE: 'template',
   WEBHOOK: 'webhook',
   WORKFLOW: 'workflow',

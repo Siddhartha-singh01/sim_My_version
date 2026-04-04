@@ -2,18 +2,21 @@
 
 import { useMemo } from 'react'
 import { useParams } from 'next/navigation'
+import { SELECTOR_CONTEXT_FIELDS } from '@/lib/workflows/subblocks/context'
 import type { SubBlockConfig } from '@/blocks/types'
+import { extractEnvVarName, isEnvVarReference, isReference } from '@/executor/constants'
+import { usePersonalEnvironment } from '@/hooks/queries/environment'
 import type { SelectorContext, SelectorKey } from '@/hooks/selectors/types'
 import { useWorkflowRegistry } from '@/stores/workflows/registry/store'
 import { useDependsOnGate } from './use-depends-on-gate'
+import { useSubBlockValue } from './use-sub-block-value'
 
 /**
  * Resolves all selector configuration from a sub-block's declarative properties.
  *
  * Builds a `SelectorContext` by mapping each `dependsOn` entry through the
  * canonical index to its `canonicalParamId`, which maps directly to
- * `SelectorContext` field names (e.g. `siteId`, `teamId`, `collectionId`).
- * The one special case is `oauthCredential` which maps to `credentialId`.
+ * `SelectorContext` field names (e.g. `siteId`, `teamId`, `oauthCredential`).
  *
  * @param blockId - The block containing the selector sub-block
  * @param subBlock - The sub-block config (must have `selectorKey` set)
@@ -29,11 +32,33 @@ export function useSelectorSetup(
   const activeWorkflowId = useWorkflowRegistry((s) => s.activeWorkflowId)
   const workflowId = (params?.workflowId as string) || activeWorkflowId || ''
 
+  const { data: envVariables = {} } = usePersonalEnvironment()
+
   const { finalDisabled, dependencyValues, canonicalIndex } = useDependsOnGate(
     blockId,
     subBlock,
     opts
   )
+
+  const [impersonateUserEmail] = useSubBlockValue<string | null>(blockId, 'impersonateUserEmail')
+
+  const resolvedDependencyValues = useMemo(() => {
+    const resolved: Record<string, unknown> = {}
+    for (const [key, value] of Object.entries(dependencyValues)) {
+      if (value === null || value === undefined) {
+        resolved[key] = value
+        continue
+      }
+      const str = String(value)
+      if (isEnvVarReference(str)) {
+        const varName = extractEnvVarName(str)
+        resolved[key] = envVariables[varName]?.value || undefined
+      } else {
+        resolved[key] = value
+      }
+    }
+    return resolved
+  }, [dependencyValues, envVariables])
 
   const selectorContext = useMemo<SelectorContext>(() => {
     const context: SelectorContext = {
@@ -41,41 +66,36 @@ export function useSelectorSetup(
       mimeType: subBlock.mimeType,
     }
 
-    for (const [depKey, value] of Object.entries(dependencyValues)) {
+    for (const [depKey, value] of Object.entries(resolvedDependencyValues)) {
       if (value === null || value === undefined) continue
       const strValue = String(value)
       if (!strValue) continue
+      if (isReference(strValue)) continue
 
       const canonicalParamId = canonicalIndex.canonicalIdBySubBlockId[depKey] ?? depKey
-
-      if (canonicalParamId === 'oauthCredential') {
-        context.credentialId = strValue
-      } else if (canonicalParamId in CONTEXT_FIELD_SET) {
-        ;(context as Record<string, unknown>)[canonicalParamId] = strValue
+      if (SELECTOR_CONTEXT_FIELDS.has(canonicalParamId as keyof SelectorContext)) {
+        context[canonicalParamId as keyof SelectorContext] = strValue
       }
     }
 
+    if (context.oauthCredential && impersonateUserEmail) {
+      context.impersonateUserEmail = impersonateUserEmail
+    }
+
     return context
-  }, [dependencyValues, canonicalIndex, workflowId, subBlock.mimeType])
+  }, [
+    resolvedDependencyValues,
+    canonicalIndex,
+    workflowId,
+    subBlock.mimeType,
+    impersonateUserEmail,
+  ])
 
   return {
     selectorKey: (subBlock.selectorKey ?? null) as SelectorKey | null,
     selectorContext,
     allowSearch: subBlock.selectorAllowSearch ?? true,
     disabled: finalDisabled || !subBlock.selectorKey,
-    dependencyValues,
+    dependencyValues: resolvedDependencyValues,
   }
-}
-
-const CONTEXT_FIELD_SET: Record<string, true> = {
-  credentialId: true,
-  domain: true,
-  teamId: true,
-  projectId: true,
-  knowledgeBaseId: true,
-  planId: true,
-  siteId: true,
-  collectionId: true,
-  spreadsheetId: true,
-  fileId: true,
 }

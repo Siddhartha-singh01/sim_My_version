@@ -1,6 +1,7 @@
 import { AirtableIcon } from '@/components/icons'
+import { getScopesForService } from '@/lib/oauth/utils'
 import type { BlockConfig } from '@/blocks/types'
-import { AuthMode } from '@/blocks/types'
+import { AuthMode, IntegrationType } from '@/blocks/types'
 import type { AirtableResponse } from '@/tools/airtable/types'
 import { getTrigger } from '@/triggers'
 
@@ -13,6 +14,8 @@ export const AirtableBlock: BlockConfig<AirtableResponse> = {
     'Integrates Airtable into the workflow. Can list bases, list tables (with schema), and create, get, list, or update records. Can also be used in trigger mode to trigger a workflow when an update is made to an Airtable table.',
   docsLink: 'https://docs.sim.ai/tools/airtable',
   category: 'tools',
+  integrationType: IntegrationType.Databases,
+  tags: ['spreadsheet', 'automation'],
   bgColor: '#E0E0E0',
   icon: AirtableIcon,
   subBlocks: [
@@ -23,6 +26,7 @@ export const AirtableBlock: BlockConfig<AirtableResponse> = {
       options: [
         { label: 'List Bases', id: 'listBases' },
         { label: 'List Tables', id: 'listTables' },
+        { label: 'Get Base Schema', id: 'getSchema' },
         { label: 'List Records', id: 'list' },
         { label: 'Get Record', id: 'get' },
         { label: 'Create Records', id: 'create' },
@@ -38,13 +42,7 @@ export const AirtableBlock: BlockConfig<AirtableResponse> = {
       canonicalParamId: 'oauthCredential',
       mode: 'basic',
       serviceId: 'airtable',
-      requiredScopes: [
-        'data.records:read',
-        'data.records:write',
-        'schema.bases:read',
-        'user.email:read',
-        'webhook:manage',
-      ],
+      requiredScopes: getScopesForService('airtable'),
       placeholder: 'Select Airtable account',
       required: true,
     },
@@ -58,22 +56,53 @@ export const AirtableBlock: BlockConfig<AirtableResponse> = {
       required: true,
     },
     {
+      id: 'baseSelector',
+      title: 'Base',
+      type: 'project-selector',
+      canonicalParamId: 'baseId',
+      serviceId: 'airtable',
+      selectorKey: 'airtable.bases',
+      selectorAllowSearch: false,
+      placeholder: 'Select Airtable base',
+      dependsOn: ['credential'],
+      mode: 'basic',
+      condition: { field: 'operation', value: 'listBases', not: true },
+      required: { field: 'operation', value: 'listBases', not: true },
+    },
+    {
       id: 'baseId',
       title: 'Base ID',
       type: 'short-input',
+      canonicalParamId: 'baseId',
       placeholder: 'Enter your base ID (e.g., appXXXXXXXXXXXXXX)',
-      dependsOn: ['credential'],
+      mode: 'advanced',
       condition: { field: 'operation', value: 'listBases', not: true },
       required: { field: 'operation', value: 'listBases', not: true },
+    },
+    {
+      id: 'tableSelector',
+      title: 'Table',
+      type: 'file-selector',
+      canonicalParamId: 'tableId',
+      serviceId: 'airtable',
+      selectorKey: 'airtable.tables',
+      selectorAllowSearch: false,
+      placeholder: 'Select Airtable table',
+      dependsOn: ['credential', 'baseSelector'],
+      mode: 'basic',
+      condition: { field: 'operation', value: ['listBases', 'listTables', 'getSchema'], not: true },
+      required: { field: 'operation', value: ['listBases', 'listTables', 'getSchema'], not: true },
     },
     {
       id: 'tableId',
       title: 'Table ID',
       type: 'short-input',
+      canonicalParamId: 'tableId',
       placeholder: 'Enter table ID (e.g., tblXXXXXXXXXXXXXX)',
       dependsOn: ['credential', 'baseId'],
-      condition: { field: 'operation', value: ['listBases', 'listTables'], not: true },
-      required: { field: 'operation', value: ['listBases', 'listTables'], not: true },
+      mode: 'advanced',
+      condition: { field: 'operation', value: ['listBases', 'listTables', 'getSchema'], not: true },
+      required: { field: 'operation', value: ['listBases', 'listTables', 'getSchema'], not: true },
     },
     {
       id: 'recordId',
@@ -221,6 +250,7 @@ Return ONLY the valid JSON object - no explanations, no markdown.`,
       'airtable_create_records',
       'airtable_update_record',
       'airtable_update_multiple_records',
+      'airtable_get_base_schema',
     ],
     config: {
       tool: (params) => {
@@ -239,6 +269,8 @@ Return ONLY the valid JSON object - no explanations, no markdown.`,
             return 'airtable_update_record'
           case 'updateMultiple':
             return 'airtable_update_multiple_records'
+          case 'getSchema':
+            return 'airtable_get_base_schema'
           default:
             throw new Error(`Invalid Airtable operation: ${params.operation}`)
         }
@@ -292,14 +324,11 @@ Return ONLY the valid JSON object - no explanations, no markdown.`,
   },
   // Output structure depends on the operation, covered by AirtableResponse union type
   outputs: {
-    // List Bases output
     bases: { type: 'json', description: 'List of accessible Airtable bases' },
-    // List Tables output
-    tables: { type: 'json', description: 'List of tables in the base with schema' },
-    // Record outputs
-    records: { type: 'json', description: 'Retrieved record data' }, // Optional: for list, create, updateMultiple
-    record: { type: 'json', description: 'Single record data' }, // Optional: for get, update single
-    metadata: { type: 'json', description: 'Operation metadata' }, // Required: present in all responses
+    tables: { type: 'json', description: 'Table schemas with fields and views' },
+    records: { type: 'json', description: 'Retrieved record data' },
+    record: { type: 'json', description: 'Single record data' },
+    metadata: { type: 'json', description: 'Operation metadata' },
     // Trigger outputs
     event_type: { type: 'string', description: 'Type of Airtable event' },
     base_id: { type: 'string', description: 'Airtable base identifier' },

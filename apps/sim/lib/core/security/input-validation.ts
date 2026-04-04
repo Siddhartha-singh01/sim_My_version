@@ -1,5 +1,6 @@
 import { createLogger } from '@sim/logger'
 import * as ipaddr from 'ipaddr.js'
+import { isHosted } from '@/lib/core/config/feature-flags'
 
 const logger = createLogger('InputValidation')
 
@@ -554,6 +555,51 @@ export function validateMicrosoftGraphId(
 }
 
 /**
+ * Validates SharePoint site IDs used in Microsoft Graph API.
+ *
+ * Site IDs are compound identifiers: `hostname,spsite-guid,spweb-guid`
+ * (e.g. `contoso.sharepoint.com,2C712604-1370-44E7-A1F5-426573FDA80A,2D2244C3-251A-49EA-93A8-39E1C3A060FE`).
+ * The API also accepts partial forms like a single GUID or just a hostname.
+ *
+ * Allowed characters: alphanumeric, periods, hyphens, and commas.
+ *
+ * @param value - The SharePoint site ID to validate
+ * @param paramName - Name of the parameter for error messages
+ * @returns ValidationResult
+ */
+export function validateSharePointSiteId(
+  value: string | null | undefined,
+  paramName = 'siteId'
+): ValidationResult {
+  if (value === null || value === undefined || value === '') {
+    return {
+      isValid: false,
+      error: `${paramName} is required`,
+    }
+  }
+
+  if (value.length > 512) {
+    return {
+      isValid: false,
+      error: `${paramName} exceeds maximum length`,
+    }
+  }
+
+  if (!/^[a-zA-Z0-9.\-,]+$/.test(value)) {
+    logger.warn('Invalid characters in SharePoint site ID', {
+      paramName,
+      value: value.substring(0, 100),
+    })
+    return {
+      isValid: false,
+      error: `${paramName} contains invalid characters`,
+    }
+  }
+
+  return { isValid: true, sanitized: value }
+}
+
+/**
  * Validates Jira Cloud IDs (typically UUID format)
  *
  * @param value - The Jira Cloud ID to validate
@@ -631,7 +677,8 @@ export function validateJiraIssueKey(
  */
 export function validateExternalUrl(
   url: string | null | undefined,
-  paramName = 'url'
+  paramName = 'url',
+  options: { allowHttp?: boolean } = {}
 ): ValidationResult {
   if (!url || typeof url !== 'string') {
     return {
@@ -664,7 +711,21 @@ export function validateExternalUrl(
     }
   }
 
-  if (protocol !== 'https:' && !(protocol === 'http:' && isLocalhost)) {
+  if (isLocalhost && isHosted) {
+    return {
+      isValid: false,
+      error: `${paramName} cannot point to localhost`,
+    }
+  }
+
+  if (options.allowHttp) {
+    if (protocol !== 'https:' && protocol !== 'http:') {
+      return {
+        isValid: false,
+        error: `${paramName} must use http:// or https:// protocol`,
+      }
+    }
+  } else if (protocol !== 'https:' && !(protocol === 'http:' && isLocalhost && !isHosted)) {
     return {
       isValid: false,
       error: `${paramName} must use https:// protocol`,
@@ -1109,4 +1170,57 @@ export function validatePaginationCursor(
   }
 
   return { isValid: true, sanitized: value }
+}
+
+/**
+ * Validates a callback URL to prevent open redirect attacks.
+ * Accepts relative paths and absolute URLs matching the current origin.
+ *
+ * @param url - The callback URL to validate
+ * @returns true if the URL is safe to redirect to
+ */
+export function validateCallbackUrl(url: string): boolean {
+  try {
+    if (url.startsWith('/')) return true
+
+    if (typeof window === 'undefined') return false
+
+    const currentOrigin = window.location.origin
+    if (url.startsWith(currentOrigin)) return true
+
+    return false
+  } catch (error) {
+    logger.error('Error validating callback URL:', { error, url })
+    return false
+  }
+}
+
+const OKTA_DOMAIN_PATTERN =
+  /^[a-zA-Z0-9][a-zA-Z0-9-]*\.(okta|okta-gov|okta-emea|oktapreview|trexcloud)\.com$/
+
+/**
+ * Validates and sanitizes an Okta domain to prevent SSRF.
+ * Ensures the domain matches a known Okta domain suffix.
+ *
+ * @param rawDomain - The raw domain string (may include protocol, trailing slash, or whitespace)
+ * @returns The cleaned, validated domain string
+ * @throws Error if the domain does not match a known Okta domain suffix
+ *
+ * @example
+ * ```typescript
+ * const domain = validateOktaDomain(params.domain)
+ * // Returns: "dev-123456.okta.com"
+ * ```
+ */
+export function validateOktaDomain(rawDomain: string): string {
+  const domain = rawDomain
+    .trim()
+    .replace(/^https?:\/\//, '')
+    .replace(/\/$/, '')
+  if (!OKTA_DOMAIN_PATTERN.test(domain)) {
+    throw new Error(
+      `Invalid Okta domain: "${domain}". Must be a valid Okta domain (e.g., dev-123456.okta.com)`
+    )
+  }
+  return domain
 }

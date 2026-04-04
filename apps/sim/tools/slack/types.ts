@@ -376,6 +376,11 @@ export const USER_OUTPUT_PROPERTIES = {
   title: { type: 'string', description: 'Job title', optional: true },
   phone: { type: 'string', description: 'Phone number', optional: true },
   skype: { type: 'string', description: 'Skype handle', optional: true },
+  email: {
+    type: 'string',
+    description: 'Email address (requires users:read.email scope)',
+    optional: true,
+  },
   is_bot: { type: 'boolean', description: 'Whether the user is a bot' },
   is_admin: { type: 'boolean', description: 'Whether the user is a workspace admin' },
   is_owner: { type: 'boolean', description: 'Whether the user is the workspace owner' },
@@ -438,6 +443,11 @@ export const USER_SUMMARY_OUTPUT_PROPERTIES = {
   name: { type: 'string', description: 'Username (handle)' },
   real_name: { type: 'string', description: 'Full real name' },
   display_name: { type: 'string', description: 'Display name shown in Slack' },
+  email: {
+    type: 'string',
+    description: 'Email address (requires users:read.email scope)',
+    optional: true,
+  },
   is_bot: { type: 'boolean', description: 'Whether the user is a bot' },
   is_admin: { type: 'boolean', description: 'Whether the user is a workspace admin' },
   is_owner: { type: 'boolean', description: 'Whether the user is the workspace owner' },
@@ -476,6 +486,90 @@ export const CANVAS_OUTPUT_PROPERTIES = {
   canvas_id: { type: 'string', description: 'Unique canvas identifier' },
   channel: { type: 'string', description: 'Channel where canvas was created' },
   title: { type: 'string', description: 'Canvas title' },
+} as const satisfies Record<string, OutputProperty>
+
+/**
+ * Output definition for modal view objects
+ * Based on Slack views.open response structure
+ */
+export const VIEW_OUTPUT_PROPERTIES = {
+  id: { type: 'string', description: 'Unique view identifier' },
+  team_id: { type: 'string', description: 'Workspace/team ID', optional: true },
+  type: { type: 'string', description: 'View type (e.g., "modal")' },
+  title: {
+    type: 'json',
+    description: 'Plain text title object with type and text fields',
+    optional: true,
+    properties: {
+      type: { type: 'string', description: 'Text object type (plain_text)' },
+      text: { type: 'string', description: 'Title text content' },
+    },
+  },
+  submit: {
+    type: 'json',
+    description: 'Plain text submit button object',
+    optional: true,
+    properties: {
+      type: { type: 'string', description: 'Text object type (plain_text)' },
+      text: { type: 'string', description: 'Submit button text' },
+    },
+  },
+  close: {
+    type: 'json',
+    description: 'Plain text close button object',
+    optional: true,
+    properties: {
+      type: { type: 'string', description: 'Text object type (plain_text)' },
+      text: { type: 'string', description: 'Close button text' },
+    },
+  },
+  blocks: {
+    type: 'array',
+    description: 'Block Kit blocks in the view',
+    items: {
+      type: 'object',
+      properties: BLOCK_OUTPUT_PROPERTIES,
+    },
+  },
+  private_metadata: {
+    type: 'string',
+    description: 'Private metadata string passed with the view',
+    optional: true,
+  },
+  callback_id: { type: 'string', description: 'Custom identifier for the view', optional: true },
+  external_id: {
+    type: 'string',
+    description: 'Custom external identifier (max 255 chars, unique per workspace)',
+    optional: true,
+  },
+  state: {
+    type: 'json',
+    description: 'Current state of the view with input values',
+    optional: true,
+  },
+  hash: { type: 'string', description: 'View version hash for updates', optional: true },
+  clear_on_close: {
+    type: 'boolean',
+    description: 'Whether to clear all views in the stack when this view is closed',
+    optional: true,
+  },
+  notify_on_close: {
+    type: 'boolean',
+    description: 'Whether to send a view_closed event when this view is closed',
+    optional: true,
+  },
+  root_view_id: {
+    type: 'string',
+    description: 'ID of the root view in the view stack',
+    optional: true,
+  },
+  previous_view_id: {
+    type: 'string',
+    description: 'ID of the previous view in the view stack',
+    optional: true,
+  },
+  app_id: { type: 'string', description: 'Application identifier', optional: true },
+  bot_id: { type: 'string', description: 'Bot identifier', optional: true },
 } as const satisfies Record<string, OutputProperty>
 
 /**
@@ -615,6 +709,18 @@ export interface SlackGetUserPresenceParams extends SlackBaseParams {
   userId: string
 }
 
+export interface SlackCreateConversationParams extends SlackBaseParams {
+  name: string
+  isPrivate?: boolean
+  teamId?: string
+}
+
+export interface SlackInviteToConversationParams extends SlackBaseParams {
+  channel: string
+  users: string
+  force?: boolean
+}
+
 export interface SlackEditCanvasParams extends SlackBaseParams {
   canvasId: string
   operation: string
@@ -627,6 +733,31 @@ export interface SlackCreateChannelCanvasParams extends SlackBaseParams {
   channel: string
   title?: string
   content?: string
+}
+
+export interface SlackOpenViewParams extends SlackBaseParams {
+  triggerId: string
+  interactivityPointer?: string
+  view: object | string
+}
+
+export interface SlackUpdateViewParams extends SlackBaseParams {
+  viewId?: string
+  externalId?: string
+  hash?: string
+  view: object | string
+}
+
+export interface SlackPushViewParams extends SlackBaseParams {
+  triggerId: string
+  interactivityPointer?: string
+  view: object | string
+}
+
+export interface SlackPublishViewParams extends SlackBaseParams {
+  userId: string
+  hash?: string
+  view: object | string
 }
 
 export interface SlackMessageResponse extends ToolResponse {
@@ -844,6 +975,7 @@ export interface SlackUser {
   title?: string
   phone?: string
   skype?: string
+  email: string
   is_bot: boolean
   is_admin: boolean
   is_owner: boolean
@@ -910,6 +1042,19 @@ export interface SlackGetChannelInfoResponse extends ToolResponse {
   }
 }
 
+export interface SlackCreateConversationResponse extends ToolResponse {
+  output: {
+    channelInfo: SlackChannel
+  }
+}
+
+export interface SlackInviteToConversationResponse extends ToolResponse {
+  output: {
+    channelInfo: SlackChannel
+    errors?: Array<{ user: string; ok: boolean; error: string }>
+  }
+}
+
 export interface SlackGetUserPresenceResponse extends ToolResponse {
   output: {
     presence: string
@@ -933,6 +1078,51 @@ export interface SlackCreateChannelCanvasResponse extends ToolResponse {
   }
 }
 
+export interface SlackView {
+  id: string
+  team_id?: string | null
+  type: string
+  title?: { type: string; text: string } | null
+  submit?: { type: string; text: string } | null
+  close?: { type: string; text: string } | null
+  blocks: SlackBlock[]
+  private_metadata?: string | null
+  callback_id?: string | null
+  external_id?: string | null
+  state?: Record<string, unknown> | null
+  hash?: string | null
+  clear_on_close?: boolean
+  notify_on_close?: boolean
+  root_view_id?: string | null
+  previous_view_id?: string | null
+  app_id?: string | null
+  bot_id?: string | null
+}
+
+export interface SlackOpenViewResponse extends ToolResponse {
+  output: {
+    view: SlackView
+  }
+}
+
+export interface SlackUpdateViewResponse extends ToolResponse {
+  output: {
+    view: SlackView
+  }
+}
+
+export interface SlackPushViewResponse extends ToolResponse {
+  output: {
+    view: SlackView
+  }
+}
+
+export interface SlackPublishViewResponse extends ToolResponse {
+  output: {
+    view: SlackView
+  }
+}
+
 export type SlackResponse =
   | SlackCanvasResponse
   | SlackMessageReaderResponse
@@ -953,3 +1143,9 @@ export type SlackResponse =
   | SlackGetUserPresenceResponse
   | SlackEditCanvasResponse
   | SlackCreateChannelCanvasResponse
+  | SlackCreateConversationResponse
+  | SlackInviteToConversationResponse
+  | SlackOpenViewResponse
+  | SlackUpdateViewResponse
+  | SlackPushViewResponse
+  | SlackPublishViewResponse

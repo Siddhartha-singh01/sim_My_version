@@ -1,6 +1,7 @@
 import { OutlookIcon } from '@/components/icons'
+import { getScopesForService } from '@/lib/oauth/utils'
 import type { BlockConfig } from '@/blocks/types'
-import { AuthMode } from '@/blocks/types'
+import { AuthMode, IntegrationType } from '@/blocks/types'
 import { normalizeFileInput } from '@/blocks/utils'
 import type { OutlookResponse } from '@/tools/outlook/types'
 import { getTrigger } from '@/triggers'
@@ -14,6 +15,8 @@ export const OutlookBlock: BlockConfig<OutlookResponse> = {
     'Integrate Outlook into the workflow. Can read, draft, send, forward, and move email messages. Can be used in trigger mode to trigger a workflow when a new email is received.',
   docsLink: 'https://docs.sim.ai/tools/outlook',
   category: 'tools',
+  integrationType: IntegrationType.Email,
+  tags: ['microsoft-365', 'messaging', 'automation'],
   triggerAllowed: true,
   bgColor: '#E0E0E0',
   icon: OutlookIcon,
@@ -42,16 +45,7 @@ export const OutlookBlock: BlockConfig<OutlookResponse> = {
       canonicalParamId: 'oauthCredential',
       mode: 'basic',
       serviceId: 'outlook',
-      requiredScopes: [
-        'Mail.ReadWrite',
-        'Mail.ReadBasic',
-        'Mail.Read',
-        'Mail.Send',
-        'offline_access',
-        'openid',
-        'profile',
-        'email',
-      ],
+      requiredScopes: getScopesForService('outlook'),
       placeholder: 'Select Microsoft account',
       required: true,
     },
@@ -188,7 +182,7 @@ export const OutlookBlock: BlockConfig<OutlookResponse> = {
       canonicalParamId: 'folder',
       serviceId: 'outlook',
       selectorKey: 'outlook.folders',
-      requiredScopes: ['Mail.ReadWrite', 'Mail.ReadBasic', 'Mail.Read'],
+      requiredScopes: getScopesForService('outlook'),
       placeholder: 'Select Outlook folder',
       dependsOn: ['credential'],
       mode: 'basic',
@@ -234,7 +228,7 @@ export const OutlookBlock: BlockConfig<OutlookResponse> = {
       canonicalParamId: 'destinationId',
       serviceId: 'outlook',
       selectorKey: 'outlook.folders',
-      requiredScopes: ['Mail.ReadWrite', 'Mail.ReadBasic', 'Mail.Read'],
+      requiredScopes: getScopesForService('outlook'),
       placeholder: 'Select destination folder',
       dependsOn: ['credential'],
       mode: 'basic',
@@ -281,7 +275,7 @@ export const OutlookBlock: BlockConfig<OutlookResponse> = {
       canonicalParamId: 'copyDestinationId',
       serviceId: 'outlook',
       selectorKey: 'outlook.folders',
-      requiredScopes: ['Mail.ReadWrite', 'Mail.ReadBasic', 'Mail.Read'],
+      requiredScopes: getScopesForService('outlook'),
       placeholder: 'Select destination folder',
       dependsOn: ['credential'],
       mode: 'basic',

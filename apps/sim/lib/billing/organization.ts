@@ -8,9 +8,10 @@ import {
 } from '@sim/db/schema'
 import { createLogger } from '@sim/logger'
 import { and, eq } from 'drizzle-orm'
-import { hasActiveSubscription } from '@/lib/billing'
+import { hasPaidSubscription } from '@/lib/billing'
 import { getPlanPricing } from '@/lib/billing/core/billing'
 import { syncUsageLimitsFromSubscription } from '@/lib/billing/core/usage'
+import { isTeam } from '@/lib/billing/plan-helpers'
 
 const logger = createLogger('BillingOrganization')
 
@@ -132,7 +133,7 @@ export async function createOrganizationForTeamPlan(
 export async function ensureOrganizationForTeamSubscription(
   subscription: SubscriptionData
 ): Promise<SubscriptionData> {
-  if (subscription.plan !== 'team') {
+  if (!isTeam(subscription.plan)) {
     return subscription
   }
 
@@ -161,7 +162,7 @@ export async function ensureOrganizationForTeamSubscription(
     const membership = existingMembership[0]
     if (membership.role === 'owner' || membership.role === 'admin') {
       // Check if org already has an active subscription (prevent duplicates)
-      if (await hasActiveSubscription(membership.organizationId)) {
+      if (await hasPaidSubscription(membership.organizationId)) {
         logger.error('Organization already has an active subscription', {
           userId,
           organizationId: membership.organizationId,
@@ -257,7 +258,7 @@ export async function syncSubscriptionUsageLimits(subscription: SubscriptionData
       const organizationId = subscription.referenceId
 
       // Set orgUsageLimit for team plans (enterprise is set via webhook with custom pricing)
-      if (subscription.plan === 'team') {
+      if (isTeam(subscription.plan)) {
         const { basePrice } = getPlanPricing(subscription.plan)
         const seats = subscription.seats ?? 1
         const orgLimit = seats * basePrice

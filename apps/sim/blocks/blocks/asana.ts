@@ -1,6 +1,7 @@
 import { AsanaIcon } from '@/components/icons'
+import { getScopesForService } from '@/lib/oauth/utils'
 import type { BlockConfig } from '@/blocks/types'
-import { AuthMode } from '@/blocks/types'
+import { AuthMode, IntegrationType } from '@/blocks/types'
 import type { AsanaResponse } from '@/tools/asana/types'
 
 export const AsanaBlock: BlockConfig<AsanaResponse> = {
@@ -11,6 +12,8 @@ export const AsanaBlock: BlockConfig<AsanaResponse> = {
   longDescription: 'Integrate Asana into the workflow. Can read, write, and update tasks.',
   docsLink: 'https://docs.sim.ai/tools/asana',
   category: 'tools',
+  integrationType: IntegrationType.Productivity,
+  tags: ['project-management', 'ticketing', 'automation'],
   bgColor: '#E0E0E0',
   icon: AsanaIcon,
   subBlocks: [
@@ -36,7 +39,7 @@ export const AsanaBlock: BlockConfig<AsanaResponse> = {
       mode: 'basic',
       required: true,
       serviceId: 'asana',
-      requiredScopes: ['default'],
+      requiredScopes: getScopesForService('asana'),
       placeholder: 'Select Asana account',
     },
     {
@@ -49,11 +52,30 @@ export const AsanaBlock: BlockConfig<AsanaResponse> = {
       required: true,
     },
     {
+      id: 'workspaceSelector',
+      title: 'Workspace',
+      type: 'project-selector',
+      canonicalParamId: 'workspace',
+      serviceId: 'asana',
+      selectorKey: 'asana.workspaces',
+      selectorAllowSearch: false,
+      placeholder: 'Select Asana workspace',
+      dependsOn: ['credential'],
+      mode: 'basic',
+      condition: {
+        field: 'operation',
+        value: ['create_task', 'get_projects', 'search_tasks'],
+      },
+      required: true,
+    },
+    {
       id: 'workspace',
       title: 'Workspace GID',
       type: 'short-input',
+      canonicalParamId: 'workspace',
       required: true,
       placeholder: 'Enter Asana workspace GID',
+      mode: 'advanced',
       condition: {
         field: 'operation',
         value: ['create_task', 'get_projects', 'search_tasks'],
@@ -82,10 +104,28 @@ export const AsanaBlock: BlockConfig<AsanaResponse> = {
       },
     },
     {
+      id: 'getTasksWorkspaceSelector',
+      title: 'Workspace',
+      type: 'project-selector',
+      canonicalParamId: 'getTasks_workspace',
+      serviceId: 'asana',
+      selectorKey: 'asana.workspaces',
+      selectorAllowSearch: false,
+      placeholder: 'Select Asana workspace',
+      dependsOn: ['credential'],
+      mode: 'basic',
+      condition: {
+        field: 'operation',
+        value: ['get_task'],
+      },
+    },
+    {
       id: 'getTasks_workspace',
       title: 'Workspace GID',
       type: 'short-input',
+      canonicalParamId: 'getTasks_workspace',
       placeholder: 'Enter workspace GID',
+      mode: 'advanced',
       condition: {
         field: 'operation',
         value: ['get_task'],

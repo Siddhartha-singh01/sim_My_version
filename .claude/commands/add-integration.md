@@ -113,7 +113,8 @@ export const {service}{Action}Tool: ToolConfig<Params, Response> = {
 ```typescript
 import { {Service}Icon } from '@/components/icons'
 import type { BlockConfig } from '@/blocks/types'
-import { AuthMode } from '@/blocks/types'
+import { AuthMode, IntegrationType } from '@/blocks/types'
+import { getScopesForService } from '@/lib/oauth/utils'
 
 export const {Service}Block: BlockConfig = {
   type: '{service}',
@@ -122,6 +123,8 @@ export const {Service}Block: BlockConfig = {
   longDescription: '...',
   docsLink: 'https://docs.sim.ai/tools/{service}',
   category: 'tools',
+  integrationType: IntegrationType.X,   // Primary category (see IntegrationType enum)
+  tags: ['oauth', 'api'],              // Cross-cutting tags (see IntegrationTag type)
   bgColor: '#HEXCOLOR',
   icon: {Service}Icon,
   authMode: AuthMode.OAuth,  // or AuthMode.ApiKey
@@ -144,6 +147,7 @@ export const {Service}Block: BlockConfig = {
       title: '{Service} Account',
       type: 'oauth-input',
       serviceId: '{service}',
+      requiredScopes: getScopesForService('{service}'),
       required: true,
     },
     // Conditional fields per operation
@@ -408,8 +412,10 @@ If creating V2 versions (API-aligned outputs):
 
 ### Block
 - [ ] Created `blocks/blocks/{service}.ts`
+- [ ] Set `integrationType` to the correct `IntegrationType` enum value
+- [ ] Set `tags` array with all applicable `IntegrationTag` values
 - [ ] Defined operation dropdown with all operations
-- [ ] Added credential field (oauth-input or short-input)
+- [ ] Added credential field with `requiredScopes: getScopesForService('{service}')`
 - [ ] Added conditional fields per operation
 - [ ] Set up dependsOn for cascading selectors
 - [ ] Configured tools.access with all tool IDs
@@ -418,6 +424,12 @@ If creating V2 versions (API-aligned outputs):
 - [ ] Registered block in `blocks/registry.ts`
 - [ ] If triggers: set `triggers.enabled` and `triggers.available`
 - [ ] If triggers: spread trigger subBlocks with `getTrigger()`
+
+### OAuth Scopes (if OAuth service)
+- [ ] Defined scopes in `lib/oauth/oauth.ts` under `OAUTH_PROVIDERS`
+- [ ] Added scope descriptions in `SCOPE_DESCRIPTIONS` within `lib/oauth/utils.ts`
+- [ ] Used `getCanonicalScopesForProvider()` in `auth.ts` (never hardcode)
+- [ ] Used `getScopesForService()` in block `requiredScopes` (never hardcode)
 
 ### Icon
 - [ ] Asked user to provide SVG
@@ -717,6 +729,25 @@ Use `wandConfig` for fields that are hard to fill out manually:
 }
 ```
 
+### OAuth Scopes (Centralized System)
+
+Scopes are maintained in a single source of truth and reused everywhere:
+
+1. **Define scopes** in `lib/oauth/oauth.ts` under `OAUTH_PROVIDERS[provider].services[service].scopes`
+2. **Add descriptions** in `SCOPE_DESCRIPTIONS` within `lib/oauth/utils.ts` for the OAuth modal UI
+3. **Reference in auth.ts** using `getCanonicalScopesForProvider(providerId)` from `@/lib/oauth/utils`
+4. **Reference in blocks** using `getScopesForService(serviceId)` from `@/lib/oauth/utils`
+
+**Never hardcode scope arrays** in `auth.ts` or block `requiredScopes`. Always import from the centralized source.
+
+```typescript
+// In auth.ts (Better Auth config)
+scopes: getCanonicalScopesForProvider('{service}'),
+
+// In block credential sub-block
+requiredScopes: getScopesForService('{service}'),
+```
+
 ### Common Gotchas
 
 1. **OAuth serviceId must match** - The `serviceId` in oauth-input must match the OAuth provider configuration
@@ -729,3 +760,5 @@ Use `wandConfig` for fields that are hard to fill out manually:
 8. **Always handle legacy file params** - Keep hidden `fileContent` params for backwards compatibility
 9. **Optional fields use advanced mode** - Set `mode: 'advanced'` on rarely-used optional fields
 10. **Complex inputs need wandConfig** - Timestamps, JSON arrays, and other hard-to-type values should have `wandConfig` enabled
+11. **Never hardcode scopes** - Use `getScopesForService()` in blocks and `getCanonicalScopesForProvider()` in auth.ts
+12. **Always add scope descriptions** - New scopes must have entries in `SCOPE_DESCRIPTIONS` within `lib/oauth/utils.ts`

@@ -1,6 +1,7 @@
 import { MicrosoftPlannerIcon } from '@/components/icons'
+import { getScopesForService } from '@/lib/oauth/utils'
 import type { BlockConfig } from '@/blocks/types'
-import { AuthMode } from '@/blocks/types'
+import { AuthMode, IntegrationType } from '@/blocks/types'
 import type { MicrosoftPlannerResponse } from '@/tools/microsoft_planner/types'
 
 interface MicrosoftPlannerBlockParams {
@@ -34,6 +35,8 @@ export const MicrosoftPlannerBlock: BlockConfig<MicrosoftPlannerResponse> = {
     'Integrate Microsoft Planner into the workflow. Manage tasks, plans, buckets, and task details including checklists and references.',
   docsLink: 'https://docs.sim.ai/tools/microsoft_planner',
   category: 'tools',
+  integrationType: IntegrationType.Productivity,
+  tags: ['project-management', 'microsoft-365', 'ticketing'],
   bgColor: '#E0E0E0',
   icon: MicrosoftPlannerIcon,
   subBlocks: [
@@ -64,15 +67,7 @@ export const MicrosoftPlannerBlock: BlockConfig<MicrosoftPlannerResponse> = {
       canonicalParamId: 'oauthCredential',
       mode: 'basic',
       serviceId: 'microsoft-planner',
-      requiredScopes: [
-        'openid',
-        'profile',
-        'email',
-        'Group.ReadWrite.All',
-        'Group.Read.All',
-        'Tasks.ReadWrite',
-        'offline_access',
-      ],
+      requiredScopes: getScopesForService('microsoft-planner'),
       placeholder: 'Select Microsoft account',
     },
     {
@@ -84,12 +79,36 @@ export const MicrosoftPlannerBlock: BlockConfig<MicrosoftPlannerResponse> = {
       placeholder: 'Enter credential ID',
     },
 
-    // Plan ID - for various operations
+    // Plan selector - basic mode
+    {
+      id: 'planSelector',
+      title: 'Plan',
+      type: 'project-selector',
+      canonicalParamId: 'planId',
+      serviceId: 'microsoft-planner',
+      selectorKey: 'microsoft.planner.plans',
+      selectorAllowSearch: false,
+      placeholder: 'Select a plan',
+      dependsOn: ['credential'],
+      mode: 'basic',
+      condition: {
+        field: 'operation',
+        value: ['create_task', 'read_task', 'read_plan', 'list_buckets', 'create_bucket'],
+      },
+      required: {
+        field: 'operation',
+        value: ['read_plan', 'list_buckets', 'create_bucket', 'create_task'],
+      },
+    },
+
+    // Plan ID - advanced mode
     {
       id: 'planId',
       title: 'Plan ID',
       type: 'short-input',
+      canonicalParamId: 'planId',
       placeholder: 'Enter the plan ID',
+      mode: 'advanced',
       condition: {
         field: 'operation',
         value: ['create_task', 'read_task', 'read_plan', 'list_buckets', 'create_bucket'],
@@ -110,7 +129,7 @@ export const MicrosoftPlannerBlock: BlockConfig<MicrosoftPlannerResponse> = {
       serviceId: 'microsoft-planner',
       selectorKey: 'microsoft.planner',
       condition: { field: 'operation', value: ['read_task'] },
-      dependsOn: ['credential', 'planId'],
+      dependsOn: ['credential', 'planSelector'],
       mode: 'basic',
       canonicalParamId: 'readTaskId',
     },

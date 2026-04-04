@@ -1,6 +1,7 @@
 import { SalesforceIcon } from '@/components/icons'
+import { getScopesForService } from '@/lib/oauth/utils'
 import type { BlockConfig } from '@/blocks/types'
-import { AuthMode } from '@/blocks/types'
+import { AuthMode, IntegrationType } from '@/blocks/types'
 import type { SalesforceResponse } from '@/tools/salesforce/types'
 
 export const SalesforceBlock: BlockConfig<SalesforceResponse> = {
@@ -12,6 +13,8 @@ export const SalesforceBlock: BlockConfig<SalesforceResponse> = {
     'Integrate Salesforce into your workflow. Manage accounts, contacts, leads, opportunities, cases, and tasks with powerful automation capabilities.',
   docsLink: 'https://docs.sim.ai/tools/salesforce',
   category: 'tools',
+  integrationType: IntegrationType.CRM,
+  tags: ['sales-engagement', 'customer-support'],
   bgColor: '#E0E0E0',
   icon: SalesforceIcon,
   subBlocks: [
@@ -65,7 +68,7 @@ export const SalesforceBlock: BlockConfig<SalesforceResponse> = {
       canonicalParamId: 'oauthCredential',
       mode: 'basic',
       serviceId: 'salesforce',
-      requiredScopes: ['api', 'refresh_token', 'openid', 'offline_access'],
+      requiredScopes: getScopesForService('salesforce'),
       placeholder: 'Select Salesforce account',
       required: true,
     },

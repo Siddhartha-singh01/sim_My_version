@@ -1,6 +1,6 @@
 import { NotionIcon } from '@/components/icons'
 import type { BlockConfig } from '@/blocks/types'
-import { AuthMode } from '@/blocks/types'
+import { AuthMode, IntegrationType } from '@/blocks/types'
 import { createVersionedToolSelector } from '@/blocks/utils'
 import type { NotionResponse } from '@/tools/notion/types'
 
@@ -15,6 +15,8 @@ export const NotionBlock: BlockConfig<NotionResponse> = {
     'Integrate with Notion into the workflow. Can read page, read database, create page, create database, append content, query database, and search workspace.',
   docsLink: 'https://docs.sim.ai/tools/notion',
   category: 'tools',
+  integrationType: IntegrationType.Documents,
+  tags: ['note-taking', 'knowledge-base', 'content-management'],
   bgColor: '#181C1E',
   icon: NotionIcon,
   subBlocks: [
@@ -53,15 +55,49 @@ export const NotionBlock: BlockConfig<NotionResponse> = {
       placeholder: 'Enter credential ID',
       required: true,
     },
-    // Read/Write operation - Page ID
+    {
+      id: 'pageSelector',
+      title: 'Page',
+      type: 'file-selector',
+      canonicalParamId: 'pageId',
+      serviceId: 'notion',
+      selectorKey: 'notion.pages',
+      placeholder: 'Select Notion page',
+      dependsOn: ['credential'],
+      mode: 'basic',
+      condition: {
+        field: 'operation',
+        value: ['notion_read', 'notion_write'],
+      },
+      required: true,
+    },
     {
       id: 'pageId',
       title: 'Page ID',
       type: 'short-input',
+      canonicalParamId: 'pageId',
       placeholder: 'Enter Notion page ID',
+      mode: 'advanced',
       condition: {
         field: 'operation',
-        value: 'notion_read',
+        value: ['notion_read', 'notion_write'],
+      },
+      required: true,
+    },
+    {
+      id: 'databaseSelector',
+      title: 'Database',
+      type: 'project-selector',
+      canonicalParamId: 'databaseId',
+      serviceId: 'notion',
+      selectorKey: 'notion.databases',
+      selectorAllowSearch: false,
+      placeholder: 'Select Notion database',
+      dependsOn: ['credential'],
+      mode: 'basic',
+      condition: {
+        field: 'operation',
+        value: ['notion_read_database', 'notion_query_database', 'notion_add_database_row'],
       },
       required: true,
     },
@@ -69,31 +105,36 @@ export const NotionBlock: BlockConfig<NotionResponse> = {
       id: 'databaseId',
       title: 'Database ID',
       type: 'short-input',
+      canonicalParamId: 'databaseId',
       placeholder: 'Enter Notion database ID',
+      mode: 'advanced',
       condition: {
         field: 'operation',
-        value: 'notion_read_database',
+        value: ['notion_read_database', 'notion_query_database', 'notion_add_database_row'],
       },
       required: true,
     },
     {
-      id: 'pageId',
-      title: 'Page ID',
-      type: 'short-input',
-      placeholder: 'Enter Notion page ID',
-      condition: {
-        field: 'operation',
-        value: 'notion_write',
-      },
+      id: 'parentSelector',
+      title: 'Parent Page',
+      type: 'file-selector',
+      canonicalParamId: 'parentId',
+      serviceId: 'notion',
+      selectorKey: 'notion.pages',
+      placeholder: 'Select parent page',
+      dependsOn: ['credential'],
+      mode: 'basic',
+      condition: { field: 'operation', value: ['notion_create_page', 'notion_create_database'] },
       required: true,
     },
-    // Create operation fields
     {
       id: 'parentId',
       title: 'Parent Page ID',
       type: 'short-input',
+      canonicalParamId: 'parentId',
       placeholder: 'ID of parent page',
-      condition: { field: 'operation', value: 'notion_create_page' },
+      mode: 'advanced',
+      condition: { field: 'operation', value: ['notion_create_page', 'notion_create_database'] },
       required: true,
     },
     {
@@ -148,14 +189,6 @@ export const NotionBlock: BlockConfig<NotionResponse> = {
       },
     },
     // Query Database Fields
-    {
-      id: 'databaseId',
-      title: 'Database ID',
-      type: 'short-input',
-      placeholder: 'Enter Notion database ID',
-      condition: { field: 'operation', value: 'notion_query_database' },
-      required: true,
-    },
     {
       id: 'filter',
       title: 'Filter',
@@ -219,14 +252,6 @@ export const NotionBlock: BlockConfig<NotionResponse> = {
     },
     // Create Database Fields
     {
-      id: 'parentId',
-      title: 'Parent Page ID',
-      type: 'short-input',
-      placeholder: 'ID of parent page where database will be created',
-      condition: { field: 'operation', value: 'notion_create_database' },
-      required: true,
-    },
-    {
       id: 'title',
       title: 'Database Title',
       type: 'short-input',
@@ -256,14 +281,6 @@ export const NotionBlock: BlockConfig<NotionResponse> = {
       },
     },
     // Add Database Row Fields
-    {
-      id: 'databaseId',
-      title: 'Database ID',
-      type: 'short-input',
-      placeholder: 'Enter Notion database ID',
-      condition: { field: 'operation', value: 'notion_add_database_row' },
-      required: true,
-    },
     {
       id: 'properties',
       title: 'Row Properties',
@@ -404,6 +421,7 @@ export const NotionBlock: BlockConfig<NotionResponse> = {
 }
 
 // V2 Block with API-aligned outputs
+
 export const NotionV2Block: BlockConfig<any> = {
   type: 'notion_v2',
   name: 'Notion',
@@ -413,6 +431,8 @@ export const NotionV2Block: BlockConfig<any> = {
     'Integrate with Notion into the workflow. Can read page, read database, create page, create database, append content, query database, and search workspace.',
   docsLink: 'https://docs.sim.ai/tools/notion',
   category: 'tools',
+  integrationType: IntegrationType.Documents,
+  tags: ['note-taking', 'knowledge-base', 'content-management'],
   bgColor: '#181C1E',
   icon: NotionIcon,
   hideFromToolbar: false,

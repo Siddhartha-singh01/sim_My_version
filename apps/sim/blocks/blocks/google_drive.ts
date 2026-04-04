@@ -1,7 +1,8 @@
 import { GoogleDriveIcon } from '@/components/icons'
+import { getScopesForService } from '@/lib/oauth/utils'
 import type { BlockConfig } from '@/blocks/types'
-import { AuthMode } from '@/blocks/types'
-import { normalizeFileInput } from '@/blocks/utils'
+import { AuthMode, IntegrationType } from '@/blocks/types'
+import { normalizeFileInput, SERVICE_ACCOUNT_SUBBLOCKS } from '@/blocks/utils'
 import type { GoogleDriveResponse } from '@/tools/google_drive/types'
 
 export const GoogleDriveBlock: BlockConfig<GoogleDriveResponse> = {
@@ -13,6 +14,8 @@ export const GoogleDriveBlock: BlockConfig<GoogleDriveResponse> = {
     'Integrate Google Drive into the workflow. Can create, upload, download, copy, move, delete, share files and manage permissions.',
   docsLink: 'https://docs.sim.ai/tools/google_drive',
   category: 'tools',
+  integrationType: IntegrationType.FileStorage,
+  tags: ['cloud', 'google-workspace', 'document-processing'],
   bgColor: '#E0E0E0',
   icon: GoogleDriveIcon,
   subBlocks: [
@@ -48,10 +51,7 @@ export const GoogleDriveBlock: BlockConfig<GoogleDriveResponse> = {
       mode: 'basic',
       required: true,
       serviceId: 'google-drive',
-      requiredScopes: [
-        'https://www.googleapis.com/auth/drive.file',
-        'https://www.googleapis.com/auth/drive',
-      ],
+      requiredScopes: getScopesForService('google-drive'),
       placeholder: 'Select Google Drive account',
     },
     {
@@ -63,6 +63,7 @@ export const GoogleDriveBlock: BlockConfig<GoogleDriveResponse> = {
       placeholder: 'Enter credential ID',
       required: true,
     },
+    ...SERVICE_ACCOUNT_SUBBLOCKS,
     // Create/Upload File Fields
     {
       id: 'fileName',
@@ -138,10 +139,7 @@ Return ONLY the file content - no explanations, no markdown code blocks, no extr
       canonicalParamId: 'uploadFolderId',
       serviceId: 'google-drive',
       selectorKey: 'google.drive',
-      requiredScopes: [
-        'https://www.googleapis.com/auth/drive.file',
-        'https://www.googleapis.com/auth/drive',
-      ],
+      requiredScopes: getScopesForService('google-drive'),
       mimeType: 'application/vnd.google-apps.folder',
       placeholder: 'Select a parent folder',
       mode: 'basic',
@@ -211,10 +209,7 @@ Return ONLY the file content - no explanations, no markdown code blocks, no extr
       canonicalParamId: 'createFolderParentId',
       serviceId: 'google-drive',
       selectorKey: 'google.drive',
-      requiredScopes: [
-        'https://www.googleapis.com/auth/drive.file',
-        'https://www.googleapis.com/auth/drive',
-      ],
+      requiredScopes: getScopesForService('google-drive'),
       mimeType: 'application/vnd.google-apps.folder',
       placeholder: 'Select a parent folder',
       mode: 'basic',
@@ -239,10 +234,7 @@ Return ONLY the file content - no explanations, no markdown code blocks, no extr
       canonicalParamId: 'listFolderId',
       serviceId: 'google-drive',
       selectorKey: 'google.drive',
-      requiredScopes: [
-        'https://www.googleapis.com/auth/drive.file',
-        'https://www.googleapis.com/auth/drive',
-      ],
+      requiredScopes: getScopesForService('google-drive'),
       mimeType: 'application/vnd.google-apps.folder',
       placeholder: 'Select a folder to list files from',
       mode: 'basic',
@@ -299,10 +291,7 @@ Return ONLY the query string - no explanations, no quotes around the whole thing
       canonicalParamId: 'downloadFileId',
       serviceId: 'google-drive',
       selectorKey: 'google.drive',
-      requiredScopes: [
-        'https://www.googleapis.com/auth/drive.file',
-        'https://www.googleapis.com/auth/drive',
-      ],
+      requiredScopes: getScopesForService('google-drive'),
       placeholder: 'Select a file to download',
       mode: 'basic',
       dependsOn: ['credential'],
@@ -361,10 +350,7 @@ Return ONLY the query string - no explanations, no quotes around the whole thing
       canonicalParamId: 'getFileId',
       serviceId: 'google-drive',
       selectorKey: 'google.drive',
-      requiredScopes: [
-        'https://www.googleapis.com/auth/drive.file',
-        'https://www.googleapis.com/auth/drive',
-      ],
+      requiredScopes: getScopesForService('google-drive'),
       placeholder: 'Select a file to get info for',
       mode: 'basic',
       dependsOn: ['credential'],
@@ -389,10 +375,7 @@ Return ONLY the query string - no explanations, no quotes around the whole thing
       canonicalParamId: 'copyFileId',
       serviceId: 'google-drive',
       selectorKey: 'google.drive',
-      requiredScopes: [
-        'https://www.googleapis.com/auth/drive.file',
-        'https://www.googleapis.com/auth/drive',
-      ],
+      requiredScopes: getScopesForService('google-drive'),
       placeholder: 'Select a file to copy',
       mode: 'basic',
       dependsOn: ['credential'],
@@ -423,10 +406,7 @@ Return ONLY the query string - no explanations, no quotes around the whole thing
       canonicalParamId: 'copyDestFolderId',
       serviceId: 'google-drive',
       selectorKey: 'google.drive',
-      requiredScopes: [
-        'https://www.googleapis.com/auth/drive.file',
-        'https://www.googleapis.com/auth/drive',
-      ],
+      requiredScopes: getScopesForService('google-drive'),
       mimeType: 'application/vnd.google-apps.folder',
       placeholder: 'Select destination folder (optional)',
       mode: 'basic',
@@ -450,10 +430,7 @@ Return ONLY the query string - no explanations, no quotes around the whole thing
       canonicalParamId: 'updateFileId',
       serviceId: 'google-drive',
       selectorKey: 'google.drive',
-      requiredScopes: [
-        'https://www.googleapis.com/auth/drive.file',
-        'https://www.googleapis.com/auth/drive',
-      ],
+      requiredScopes: getScopesForService('google-drive'),
       placeholder: 'Select a file to update',
       mode: 'basic',
       dependsOn: ['credential'],
@@ -529,10 +506,7 @@ Return ONLY the description text - no explanations, no quotes, no extra text.`,
       canonicalParamId: 'trashFileId',
       serviceId: 'google-drive',
       selectorKey: 'google.drive',
-      requiredScopes: [
-        'https://www.googleapis.com/auth/drive.file',
-        'https://www.googleapis.com/auth/drive',
-      ],
+      requiredScopes: getScopesForService('google-drive'),
       placeholder: 'Select a file to move to trash',
       mode: 'basic',
       dependsOn: ['credential'],
@@ -557,10 +531,7 @@ Return ONLY the description text - no explanations, no quotes, no extra text.`,
       canonicalParamId: 'deleteFileId',
       serviceId: 'google-drive',
       selectorKey: 'google.drive',
-      requiredScopes: [
-        'https://www.googleapis.com/auth/drive.file',
-        'https://www.googleapis.com/auth/drive',
-      ],
+      requiredScopes: getScopesForService('google-drive'),
       placeholder: 'Select a file to permanently delete',
       mode: 'basic',
       dependsOn: ['credential'],
@@ -585,10 +556,7 @@ Return ONLY the description text - no explanations, no quotes, no extra text.`,
       canonicalParamId: 'shareFileId',
       serviceId: 'google-drive',
       selectorKey: 'google.drive',
-      requiredScopes: [
-        'https://www.googleapis.com/auth/drive.file',
-        'https://www.googleapis.com/auth/drive',
-      ],
+      requiredScopes: getScopesForService('google-drive'),
       placeholder: 'Select a file to share',
       mode: 'basic',
       dependsOn: ['credential'],
@@ -700,10 +668,7 @@ Return ONLY the message text - no subject line, no greetings/signatures, no extr
       canonicalParamId: 'unshareFileId',
       serviceId: 'google-drive',
       selectorKey: 'google.drive',
-      requiredScopes: [
-        'https://www.googleapis.com/auth/drive.file',
-        'https://www.googleapis.com/auth/drive',
-      ],
+      requiredScopes: getScopesForService('google-drive'),
       placeholder: 'Select a file to remove sharing from',
       mode: 'basic',
       dependsOn: ['credential'],
@@ -736,10 +701,7 @@ Return ONLY the message text - no subject line, no greetings/signatures, no extr
       canonicalParamId: 'listPermissionsFileId',
       serviceId: 'google-drive',
       selectorKey: 'google.drive',
-      requiredScopes: [
-        'https://www.googleapis.com/auth/drive.file',
-        'https://www.googleapis.com/auth/drive',
-      ],
+      requiredScopes: getScopesForService('google-drive'),
       placeholder: 'Select a file to list permissions for',
       mode: 'basic',
       dependsOn: ['credential'],

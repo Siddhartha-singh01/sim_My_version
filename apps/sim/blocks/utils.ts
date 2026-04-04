@@ -1,12 +1,40 @@
-import { isHosted } from '@/lib/core/config/feature-flags'
+import { isAzureConfigured, isHosted } from '@/lib/core/config/feature-flags'
+import { getScopesForService } from '@/lib/oauth/utils'
 import type { BlockOutput, OutputFieldDefinition, SubBlockConfig } from '@/blocks/types'
 import {
   getHostedModels,
   getProviderFromModel,
   getProviderIcon,
-  providers,
-} from '@/providers/utils'
+  getProviderModels,
+} from '@/providers/models'
 import { useProvidersStore } from '@/stores/providers/store'
+
+export const VERTEX_MODELS = getProviderModels('vertex')
+export const BEDROCK_MODELS = getProviderModels('bedrock')
+export const AZURE_MODELS = [
+  ...getProviderModels('azure-openai'),
+  ...getProviderModels('azure-anthropic'),
+]
+
+/**
+ * Standard subblocks for Google service account impersonation.
+ * Uses a reactive condition that fetches the credential by ID to check if it's
+ * a service account — works in both block editor and agent tool-input contexts.
+ */
+export const SERVICE_ACCOUNT_SUBBLOCKS: SubBlockConfig[] = [
+  {
+    id: 'impersonateUserEmail',
+    title: 'Impersonated Account',
+    type: 'short-input',
+    placeholder: 'Email to impersonate (for service accounts)',
+    paramVisibility: 'user-only',
+    reactiveCondition: {
+      watchFields: ['oauthCredential'],
+      requiredType: 'service_account',
+    },
+    mode: 'both',
+  },
+]
 
 /**
  * Returns model options for combobox subblocks, combining all provider sources.
@@ -17,8 +45,15 @@ export function getModelOptions() {
   const ollamaModels = providersState.providers.ollama.models
   const vllmModels = providersState.providers.vllm.models
   const openrouterModels = providersState.providers.openrouter.models
+  const fireworksModels = providersState.providers.fireworks.models
   const allModels = Array.from(
-    new Set([...baseModels, ...ollamaModels, ...vllmModels, ...openrouterModels])
+    new Set([
+      ...baseModels,
+      ...ollamaModels,
+      ...vllmModels,
+      ...openrouterModels,
+      ...fireworksModels,
+    ])
   )
 
   return allModels.map((model) => {
@@ -94,6 +129,16 @@ function shouldRequireApiKeyForModel(model: string): boolean {
     return false
   }
 
+  if (
+    isAzureConfigured &&
+    (normalizedModel.startsWith('azure/') ||
+      normalizedModel.startsWith('azure-openai/') ||
+      normalizedModel.startsWith('azure-anthropic/') ||
+      AZURE_MODELS.some((m) => m.toLowerCase() === normalizedModel))
+  ) {
+    return false
+  }
+
   if (normalizedModel.startsWith('vllm/')) {
     return false
   }
@@ -147,12 +192,27 @@ export function getProviderCredentialSubBlocks(): SubBlockConfig[] {
       title: 'Google Cloud Account',
       type: 'oauth-input',
       serviceId: 'vertex-ai',
-      requiredScopes: ['https://www.googleapis.com/auth/cloud-platform'],
+      canonicalParamId: 'vertexCredential',
+      mode: 'basic',
+      requiredScopes: getScopesForService('vertex-ai'),
       placeholder: 'Select Google Cloud account',
       required: true,
       condition: {
         field: 'model',
-        value: providers.vertex.models,
+        value: VERTEX_MODELS,
+      },
+    },
+    {
+      id: 'vertexManualCredential',
+      title: 'Google Cloud Account',
+      type: 'short-input',
+      canonicalParamId: 'vertexCredential',
+      mode: 'advanced',
+      placeholder: 'Enter credential ID',
+      required: true,
+      condition: {
+        field: 'model',
+        value: VERTEX_MODELS,
       },
     },
     {
@@ -172,9 +232,10 @@ export function getProviderCredentialSubBlocks(): SubBlockConfig[] {
       password: true,
       placeholder: 'https://your-resource.services.ai.azure.com',
       connectionDroppable: false,
+      hideWhenEnvSet: 'NEXT_PUBLIC_AZURE_CONFIGURED',
       condition: {
         field: 'model',
-        value: [...providers['azure-openai'].models, ...providers['azure-anthropic'].models],
+        value: AZURE_MODELS,
       },
     },
     {
@@ -183,21 +244,23 @@ export function getProviderCredentialSubBlocks(): SubBlockConfig[] {
       type: 'short-input',
       placeholder: 'Enter API version',
       connectionDroppable: false,
+      hideWhenEnvSet: 'NEXT_PUBLIC_AZURE_CONFIGURED',
       condition: {
         field: 'model',
-        value: [...providers['azure-openai'].models, ...providers['azure-anthropic'].models],
+        value: AZURE_MODELS,
       },
     },
     {
       id: 'vertexProject',
       title: 'Vertex AI Project',
       type: 'short-input',
+      password: true,
       placeholder: 'your-gcp-project-id',
       connectionDroppable: false,
       required: true,
       condition: {
         field: 'model',
-        value: providers.vertex.models,
+        value: VERTEX_MODELS,
       },
     },
     {
@@ -209,7 +272,7 @@ export function getProviderCredentialSubBlocks(): SubBlockConfig[] {
       required: true,
       condition: {
         field: 'model',
-        value: providers.vertex.models,
+        value: VERTEX_MODELS,
       },
     },
     {
@@ -220,9 +283,10 @@ export function getProviderCredentialSubBlocks(): SubBlockConfig[] {
       placeholder: 'Enter your AWS Access Key ID',
       connectionDroppable: false,
       required: true,
+      hideWhenEnvSet: 'NEXT_PUBLIC_BEDROCK_DEFAULT_CREDENTIALS',
       condition: {
         field: 'model',
-        value: providers.bedrock.models,
+        value: BEDROCK_MODELS,
       },
     },
     {
@@ -233,9 +297,10 @@ export function getProviderCredentialSubBlocks(): SubBlockConfig[] {
       placeholder: 'Enter your AWS Secret Access Key',
       connectionDroppable: false,
       required: true,
+      hideWhenEnvSet: 'NEXT_PUBLIC_BEDROCK_DEFAULT_CREDENTIALS',
       condition: {
         field: 'model',
-        value: providers.bedrock.models,
+        value: BEDROCK_MODELS,
       },
     },
     {
@@ -246,7 +311,7 @@ export function getProviderCredentialSubBlocks(): SubBlockConfig[] {
       connectionDroppable: false,
       condition: {
         field: 'model',
-        value: providers.bedrock.models,
+        value: BEDROCK_MODELS,
       },
     },
   ]
@@ -363,4 +428,123 @@ export function normalizeFileInput(
   }
 
   return files
+}
+
+/**
+ * Block types that are built-in to the platform (as opposed to third-party integrations).
+ * Used to categorize tools in the tool selection dropdown.
+ */
+export const BUILT_IN_TOOL_TYPES = new Set([
+  'api',
+  'file',
+  'function',
+  'knowledge',
+  'search',
+  'thinking',
+  'image_generator',
+  'video_generator',
+  'vision',
+  'translate',
+  'tts',
+  'stt',
+  'memory',
+  'table',
+  'webhook_request',
+  'workflow',
+])
+
+/**
+ * Shared wand configuration for the Response Format code subblock.
+ * Used by Agent and Mothership blocks.
+ */
+export const RESPONSE_FORMAT_WAND_CONFIG = {
+  enabled: true,
+  maintainHistory: true,
+  prompt: `You are an expert programmer specializing in creating JSON schemas according to a specific format.
+Generate ONLY the JSON schema based on the user's request.
+The output MUST be a single, valid JSON object, starting with { and ending with }.
+The JSON object MUST have the following top-level properties: 'name' (string), 'description' (string), 'strict' (boolean, usually true), and 'schema' (object).
+The 'schema' object must define the structure and MUST contain 'type': 'object', 'properties': {...}, 'additionalProperties': false, and 'required': [...].
+Inside 'properties', use standard JSON Schema properties (type, description, enum, items for arrays, etc.).
+
+Current schema: {context}
+
+Do not include any explanations, markdown formatting, or other text outside the JSON object.
+
+Valid Schema Examples:
+
+Example 1:
+{
+    "name": "reddit_post",
+    "description": "Fetches the reddit posts in the given subreddit",
+    "strict": true,
+    "schema": {
+        "type": "object",
+        "properties": {
+            "title": {
+                "type": "string",
+                "description": "The title of the post"
+            },
+            "content": {
+                "type": "string",
+                "description": "The content of the post"
+            }
+        },
+        "additionalProperties": false,
+        "required": [ "title", "content" ]
+    }
+}
+
+Example 2:
+{
+    "name": "get_weather",
+    "description": "Fetches the current weather for a specific location.",
+    "strict": true,
+    "schema": {
+        "type": "object",
+        "properties": {
+            "location": {
+                "type": "string",
+                "description": "The city and state, e.g., San Francisco, CA"
+            },
+            "unit": {
+                "type": "string",
+                "description": "Temperature unit",
+                "enum": ["celsius", "fahrenheit"]
+            }
+        },
+        "additionalProperties": false,
+        "required": ["location", "unit"]
+    }
+}
+
+Example 3 (Array Input):
+{
+    "name": "process_items",
+    "description": "Processes a list of items with specific IDs.",
+    "strict": true,
+    "schema": {
+        "type": "object",
+        "properties": {
+            "item_ids": {
+                "type": "array",
+                "description": "A list of unique item identifiers to process.",
+                "items": {
+                    "type": "string",
+                    "description": "An item ID"
+                }
+            },
+            "processing_mode": {
+                "type": "string",
+                "description": "The mode for processing",
+                "enum": ["fast", "thorough"]
+            }
+        },
+        "additionalProperties": false,
+        "required": ["item_ids", "processing_mode"]
+    }
+}
+`,
+  placeholder: 'Describe the JSON schema structure you need...',
+  generationType: 'json-schema' as const,
 }

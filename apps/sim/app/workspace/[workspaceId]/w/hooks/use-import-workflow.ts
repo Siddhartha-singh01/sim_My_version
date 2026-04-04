@@ -3,14 +3,15 @@ import { createLogger } from '@sim/logger'
 import { useQueryClient } from '@tanstack/react-query'
 import { useRouter } from 'next/navigation'
 import {
-  extractWorkflowName,
   extractWorkflowsFromFiles,
   extractWorkflowsFromZip,
-  parseWorkflowJson,
+  persistImportedWorkflow,
   sanitizePathSegment,
 } from '@/lib/workflows/operations/import-export'
-import { folderKeys, useCreateFolder } from '@/hooks/queries/folders'
-import { useCreateWorkflow, workflowKeys } from '@/hooks/queries/workflows'
+import { useCreateFolder } from '@/hooks/queries/folders'
+import { folderKeys } from '@/hooks/queries/utils/folder-keys'
+import { invalidateWorkflowLists } from '@/hooks/queries/utils/invalidate-workflow-lists'
+import { useCreateWorkflow } from '@/hooks/queries/workflows'
 import { useWorkflowDiffStore } from '@/stores/workflow-diff/store'
 
 const logger = createLogger('useImportWorkflow')
@@ -42,75 +43,26 @@ export function useImportWorkflow({ workspaceId }: UseImportWorkflowProps) {
    */
   const importSingleWorkflow = useCallback(
     async (content: string, filename: string, folderId?: string, sortOrder?: number) => {
-      const { data: workflowData, errors: parseErrors } = parseWorkflowJson(content)
-
-      if (!workflowData || parseErrors.length > 0) {
-        logger.warn(`Failed to parse ${filename}:`, parseErrors)
-        return null
-      }
-
-      const workflowName = extractWorkflowName(content, filename)
       clearDiff()
-
-      const workflowColor =
-        (workflowData.metadata as { color?: string } | undefined)?.color || '#3972F6'
-
-      const result = await createWorkflowMutation.mutateAsync({
-        name: workflowName,
-        description: workflowData.metadata?.description || 'Imported from JSON',
+      const result = await persistImportedWorkflow({
+        content,
+        filename,
         workspaceId,
-        folderId: folderId || undefined,
+        folderId,
         sortOrder,
-        color: workflowColor,
+        createWorkflow: async ({ name, description, color, workspaceId, folderId, sortOrder }) =>
+          createWorkflowMutation.mutateAsync({
+            name,
+            description,
+            color,
+            workspaceId,
+            folderId,
+            sortOrder,
+            deduplicate: true,
+          }),
       })
-      const newWorkflowId = result.id
 
-      const stateResponse = await fetch(`/api/workflows/${newWorkflowId}/state`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(workflowData),
-      })
-
-      if (!stateResponse.ok) {
-        logger.error(`Failed to save workflow state for ${newWorkflowId}`)
-      }
-
-      if (workflowData.variables) {
-        const variablesArray = Array.isArray(workflowData.variables)
-          ? workflowData.variables
-          : Object.values(workflowData.variables)
-
-        if (variablesArray.length > 0) {
-          const variablesRecord: Record<
-            string,
-            { id: string; workflowId: string; name: string; type: string; value: unknown }
-          > = {}
-
-          for (const v of variablesArray) {
-            const id = typeof v.id === 'string' && v.id.trim() ? v.id : crypto.randomUUID()
-            variablesRecord[id] = {
-              id,
-              workflowId: newWorkflowId,
-              name: v.name,
-              type: v.type,
-              value: v.value,
-            }
-          }
-
-          const variablesResponse = await fetch(`/api/workflows/${newWorkflowId}/variables`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ variables: variablesRecord }),
-          })
-
-          if (!variablesResponse.ok) {
-            logger.error(`Failed to save variables for ${newWorkflowId}`)
-          }
-        }
-      }
-
-      logger.info(`Imported workflow: ${workflowName}`)
-      return newWorkflowId
+      return result?.workflowId ?? null
     },
     [clearDiff, createWorkflowMutation, workspaceId]
   )
@@ -246,7 +198,7 @@ export function useImportWorkflow({ workspaceId }: UseImportWorkflowProps) {
           }
         }
 
-        await queryClient.invalidateQueries({ queryKey: workflowKeys.list(workspaceId) })
+        await invalidateWorkflowLists(queryClient, workspaceId)
         await queryClient.invalidateQueries({ queryKey: folderKeys.list(workspaceId) })
 
         logger.info(`Import complete. Imported ${importedWorkflowIds.length} workflow(s)`)

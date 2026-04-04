@@ -1,5 +1,7 @@
 import { useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
+import { extractEnvVarName, isEnvVarReference, isReference } from '@/executor/constants'
+import { usePersonalEnvironment } from '@/hooks/queries/environment'
 import { getSelectorDefinition, mergeOption } from '@/hooks/selectors/registry'
 import type { SelectorKey, SelectorOption, SelectorQueryArgs } from '@/hooks/selectors/types'
 
@@ -19,7 +21,7 @@ export function useSelectorOptions(key: SelectorKey, args: SelectorHookArgs) {
   const isEnabled = args.enabled ?? (definition.enabled ? definition.enabled(queryArgs) : true)
   return useQuery<SelectorOption[]>({
     queryKey: definition.getQueryKey(queryArgs),
-    queryFn: () => definition.fetchList(queryArgs),
+    queryFn: ({ signal }) => definition.fetchList({ ...queryArgs, signal }),
     enabled: isEnabled,
     staleTime: definition.staleTime ?? 30_000,
   })
@@ -29,14 +31,27 @@ export function useSelectorOptionDetail(
   key: SelectorKey,
   args: SelectorHookArgs & { detailId?: string }
 ) {
+  const { data: envVariables = {} } = usePersonalEnvironment()
   const definition = getSelectorDefinition(key)
+
+  const resolvedDetailId = useMemo(() => {
+    if (!args.detailId) return undefined
+    if (isReference(args.detailId)) return undefined
+    if (isEnvVarReference(args.detailId)) {
+      const varName = extractEnvVarName(args.detailId)
+      return envVariables[varName]?.value || undefined
+    }
+    return args.detailId
+  }, [args.detailId, envVariables])
+
   const queryArgs: SelectorQueryArgs = {
     key,
     context: args.context,
-    detailId: args.detailId,
+    detailId: resolvedDetailId,
   }
+  const hasRealDetailId = Boolean(resolvedDetailId)
   const baseEnabled =
-    Boolean(args.detailId) && definition.fetchById !== undefined
+    hasRealDetailId && definition.fetchById !== undefined
       ? definition.enabled
         ? definition.enabled(queryArgs)
         : true
@@ -44,8 +59,8 @@ export function useSelectorOptionDetail(
   const enabled = args.enabled ?? baseEnabled
 
   const query = useQuery<SelectorOption | null>({
-    queryKey: [...definition.getQueryKey(queryArgs), 'detail', args.detailId ?? 'none'],
-    queryFn: () => definition.fetchById!(queryArgs),
+    queryKey: [...definition.getQueryKey(queryArgs), 'detail', resolvedDetailId ?? 'none'],
+    queryFn: ({ signal }) => definition.fetchById!({ ...queryArgs, signal }),
     enabled,
     staleTime: definition.staleTime ?? 300_000,
   })

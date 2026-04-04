@@ -19,7 +19,8 @@ When the user asks you to create a block:
 ```typescript
 import { {ServiceName}Icon } from '@/components/icons'
 import type { BlockConfig } from '@/blocks/types'
-import { AuthMode } from '@/blocks/types'
+import { AuthMode, IntegrationType } from '@/blocks/types'
+import { getScopesForService } from '@/lib/oauth/utils'
 
 export const {ServiceName}Block: BlockConfig = {
   type: '{service}',                    // snake_case identifier
@@ -28,6 +29,8 @@ export const {ServiceName}Block: BlockConfig = {
   longDescription: 'Detailed description for docs',
   docsLink: 'https://docs.sim.ai/tools/{service}',
   category: 'tools',                    // 'tools' | 'blocks' | 'triggers'
+  integrationType: IntegrationType.X,   // Primary category (see IntegrationType enum)
+  tags: ['oauth', 'api'],              // Cross-cutting tags (see IntegrationTag type)
   bgColor: '#HEXCOLOR',                 // Brand color
   icon: {ServiceName}Icon,
 
@@ -115,11 +118,16 @@ export const {ServiceName}Block: BlockConfig = {
   id: 'credential',
   title: 'Account',
   type: 'oauth-input',
-  serviceId: '{service}',  // Must match OAuth provider
+  serviceId: '{service}',  // Must match OAuth provider service key
+  requiredScopes: getScopesForService('{service}'),  // Import from @/lib/oauth/utils
   placeholder: 'Select account',
   required: true,
 }
 ```
+
+**Scopes:** Always use `getScopesForService(serviceId)` from `@/lib/oauth/utils` for `requiredScopes`. Never hardcode scope arrays — the single source of truth is `OAUTH_PROVIDERS` in `lib/oauth/oauth.ts`.
+
+**Scope descriptions:** When adding a new OAuth provider, also add human-readable descriptions for all scopes in `SCOPE_DESCRIPTIONS` within `lib/oauth/utils.ts`.
 
 ### Selectors (with dynamic options)
 ```typescript
@@ -623,7 +631,8 @@ export const registry: Record<string, BlockConfig> = {
 ```typescript
 import { ServiceIcon } from '@/components/icons'
 import type { BlockConfig } from '@/blocks/types'
-import { AuthMode } from '@/blocks/types'
+import { AuthMode, IntegrationType } from '@/blocks/types'
+import { getScopesForService } from '@/lib/oauth/utils'
 
 export const ServiceBlock: BlockConfig = {
   type: 'service',
@@ -632,6 +641,8 @@ export const ServiceBlock: BlockConfig = {
   longDescription: 'Full description for documentation...',
   docsLink: 'https://docs.sim.ai/tools/service',
   category: 'tools',
+  integrationType: IntegrationType.DeveloperTools,
+  tags: ['oauth', 'api'],
   bgColor: '#FF6B6B',
   icon: ServiceIcon,
   authMode: AuthMode.OAuth,
@@ -654,6 +665,7 @@ export const ServiceBlock: BlockConfig = {
       title: 'Service Account',
       type: 'oauth-input',
       serviceId: 'service',
+      requiredScopes: getScopesForService('service'),
       placeholder: 'Select account',
       required: true,
     },
@@ -788,11 +800,14 @@ All tool IDs referenced in `tools.access` and returned by `tools.config.tool` MU
 
 ## Checklist Before Finishing
 
+- [ ] `integrationType` is set to the correct `IntegrationType` enum value
+- [ ] `tags` array includes all applicable `IntegrationTag` values
 - [ ] All subBlocks have `id`, `title` (except switch), and `type`
 - [ ] Conditions use correct syntax (field, value, not, and)
 - [ ] DependsOn set for fields that need other values
 - [ ] Required fields marked correctly (boolean or condition)
-- [ ] OAuth inputs have correct `serviceId`
+- [ ] OAuth inputs have correct `serviceId` and `requiredScopes: getScopesForService(serviceId)`
+- [ ] Scope descriptions added to `SCOPE_DESCRIPTIONS` in `lib/oauth/utils.ts` for any new scopes
 - [ ] Tools.access lists all tool IDs (snake_case)
 - [ ] Tools.config.tool returns correct tool ID (snake_case)
 - [ ] Outputs match tool outputs

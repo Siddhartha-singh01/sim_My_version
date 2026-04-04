@@ -337,7 +337,7 @@ describe.concurrent('Blocks Module', () => {
         expect(modelSubBlock).toBeDefined()
         expect(modelSubBlock?.type).toBe('combobox')
         expect(modelSubBlock?.required).toBe(true)
-        expect(modelSubBlock?.defaultValue).toBe('claude-sonnet-4-5')
+        expect(modelSubBlock?.defaultValue).toBe('claude-sonnet-4-6')
       })
 
       it('should have LLM tool access', () => {
@@ -435,7 +435,7 @@ describe.concurrent('Blocks Module', () => {
 
   describe('Input/Output Validation', () => {
     it('should have valid input types', () => {
-      const validTypes = ['string', 'number', 'boolean', 'json', 'array']
+      const validTypes = ['string', 'number', 'boolean', 'json', 'array', 'file']
       const blocks = getAllBlocks()
       for (const block of blocks) {
         for (const [_, inputConfig] of Object.entries(block.inputs)) {
@@ -667,15 +667,18 @@ describe.concurrent('Blocks Module', () => {
       const errors: string[] = []
 
       for (const block of blocks) {
-        const allSubBlockIds = new Set(block.subBlocks.map((sb) => sb.id))
+        // Exclude trigger-mode subBlocks — they operate in a separate rendering context
+        // and their IDs don't participate in canonical param resolution
+        const nonTriggerSubBlocks = block.subBlocks.filter((sb) => sb.mode !== 'trigger')
+        const allSubBlockIds = new Set(nonTriggerSubBlocks.map((sb) => sb.id))
         const canonicalParamIds = new Set(
-          block.subBlocks.filter((sb) => sb.canonicalParamId).map((sb) => sb.canonicalParamId)
+          nonTriggerSubBlocks.filter((sb) => sb.canonicalParamId).map((sb) => sb.canonicalParamId)
         )
 
         for (const canonicalId of canonicalParamIds) {
           if (allSubBlockIds.has(canonicalId!)) {
             // Check if the matching subBlock also has a canonicalParamId pointing to itself
-            const matchingSubBlock = block.subBlocks.find(
+            const matchingSubBlock = nonTriggerSubBlocks.find(
               (sb) => sb.id === canonicalId && !sb.canonicalParamId
             )
             if (matchingSubBlock) {
@@ -855,6 +858,10 @@ describe.concurrent('Blocks Module', () => {
           if (subBlock.canonicalParamId) {
             // Skip function conditions - we can't evaluate them statically
             if (typeof subBlock.condition === 'function') {
+              continue
+            }
+            // Skip trigger-mode subBlocks — they operate in a separate rendering context
+            if (subBlock.mode === 'trigger') {
               continue
             }
             const conditionKey = serializeCondition(subBlock.condition)

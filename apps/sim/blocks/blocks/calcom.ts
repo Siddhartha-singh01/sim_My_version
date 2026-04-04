@@ -1,6 +1,6 @@
 import { CalComIcon } from '@/components/icons'
 import type { BlockConfig } from '@/blocks/types'
-import { AuthMode } from '@/blocks/types'
+import { AuthMode, IntegrationType } from '@/blocks/types'
 import type { ToolResponse } from '@/tools/types'
 import { getTrigger } from '@/triggers'
 
@@ -14,6 +14,8 @@ export const CalComBlock: BlockConfig<ToolResponse> = {
     'Integrate Cal.com into your workflow. Create and manage bookings, event types, schedules, and check availability slots. Supports creating, listing, rescheduling, and canceling bookings, as well as managing event types and schedules. Can also trigger workflows based on Cal.com webhook events (booking created, cancelled, rescheduled). Connect your Cal.com account via OAuth.',
   docsLink: 'https://docs.sim.ai/tools/calcom',
   category: 'tools',
+  integrationType: IntegrationType.Productivity,
+  tags: ['scheduling', 'calendar', 'meeting'],
   bgColor: '#FFFFFE',
   icon: CalComIcon,
   subBlocks: [
@@ -66,10 +68,29 @@ export const CalComBlock: BlockConfig<ToolResponse> = {
 
     // === Create Booking fields ===
     {
+      id: 'eventTypeSelector',
+      title: 'Event Type',
+      type: 'project-selector',
+      canonicalParamId: 'eventTypeId',
+      serviceId: 'calcom',
+      selectorKey: 'calcom.eventTypes',
+      selectorAllowSearch: false,
+      placeholder: 'Select event type',
+      dependsOn: ['credential'],
+      mode: 'basic',
+      condition: {
+        field: 'operation',
+        value: ['calcom_create_booking', 'calcom_get_slots'],
+      },
+      required: { field: 'operation', value: 'calcom_create_booking' },
+    },
+    {
       id: 'eventTypeId',
       title: 'Event Type ID',
       type: 'short-input',
+      canonicalParamId: 'eventTypeId',
       placeholder: 'Enter event type ID (number)',
+      mode: 'advanced',
       condition: {
         field: 'operation',
         value: ['calcom_create_booking', 'calcom_get_slots'],
@@ -262,10 +283,32 @@ Return ONLY the IANA timezone string - no explanations or quotes.`,
 
     // === Event Type fields ===
     {
+      id: 'eventTypeParamSelector',
+      title: 'Event Type',
+      type: 'project-selector',
+      canonicalParamId: 'eventTypeIdParam',
+      serviceId: 'calcom',
+      selectorKey: 'calcom.eventTypes',
+      selectorAllowSearch: false,
+      placeholder: 'Select event type',
+      dependsOn: ['credential'],
+      mode: 'basic',
+      condition: {
+        field: 'operation',
+        value: ['calcom_get_event_type', 'calcom_update_event_type', 'calcom_delete_event_type'],
+      },
+      required: {
+        field: 'operation',
+        value: ['calcom_get_event_type', 'calcom_update_event_type', 'calcom_delete_event_type'],
+      },
+    },
+    {
       id: 'eventTypeIdParam',
       title: 'Event Type ID',
       type: 'short-input',
+      canonicalParamId: 'eventTypeIdParam',
       placeholder: 'Enter event type ID',
+      mode: 'advanced',
       condition: {
         field: 'operation',
         value: ['calcom_get_event_type', 'calcom_update_event_type', 'calcom_delete_event_type'],
@@ -365,9 +408,26 @@ Return ONLY the IANA timezone string - no explanations or quotes.`,
       mode: 'advanced',
     },
     {
+      id: 'eventTypeScheduleSelector',
+      title: 'Schedule',
+      type: 'project-selector',
+      canonicalParamId: 'eventTypeScheduleId',
+      serviceId: 'calcom',
+      selectorKey: 'calcom.schedules',
+      selectorAllowSearch: false,
+      placeholder: 'Select schedule',
+      dependsOn: ['credential'],
+      mode: 'basic',
+      condition: {
+        field: 'operation',
+        value: ['calcom_create_event_type', 'calcom_update_event_type'],
+      },
+    },
+    {
       id: 'eventTypeScheduleId',
       title: 'Schedule ID',
       type: 'short-input',
+      canonicalParamId: 'eventTypeScheduleId',
       placeholder: 'Assign to a specific schedule',
       condition: {
         field: 'operation',
@@ -389,10 +449,32 @@ Return ONLY the IANA timezone string - no explanations or quotes.`,
 
     // === Schedule fields ===
     {
+      id: 'scheduleSelector',
+      title: 'Schedule',
+      type: 'project-selector',
+      canonicalParamId: 'scheduleId',
+      serviceId: 'calcom',
+      selectorKey: 'calcom.schedules',
+      selectorAllowSearch: false,
+      placeholder: 'Select schedule',
+      dependsOn: ['credential'],
+      mode: 'basic',
+      condition: {
+        field: 'operation',
+        value: ['calcom_get_schedule', 'calcom_update_schedule', 'calcom_delete_schedule'],
+      },
+      required: {
+        field: 'operation',
+        value: ['calcom_get_schedule', 'calcom_update_schedule', 'calcom_delete_schedule'],
+      },
+    },
+    {
       id: 'scheduleId',
       title: 'Schedule ID',
       type: 'short-input',
+      canonicalParamId: 'scheduleId',
       placeholder: 'Enter schedule ID',
+      mode: 'advanced',
       condition: {
         field: 'operation',
         value: ['calcom_get_schedule', 'calcom_update_schedule', 'calcom_delete_schedule'],
@@ -771,7 +853,10 @@ Return ONLY valid JSON - no explanations.`,
     cancellationReason: { type: 'string', description: 'Reason for cancellation' },
     reschedulingReason: { type: 'string', description: 'Reason for rescheduling' },
     bookingStatus: { type: 'string', description: 'Filter by booking status' },
-    eventTypeIdParam: { type: 'number', description: 'Event type ID for get/update/delete' },
+    eventTypeIdParam: {
+      type: 'number',
+      description: 'Event type ID for get/update/delete',
+    },
     title: { type: 'string', description: 'Event type title' },
     slug: { type: 'string', description: 'URL-friendly slug' },
     eventLength: { type: 'number', description: 'Event duration in minutes' },

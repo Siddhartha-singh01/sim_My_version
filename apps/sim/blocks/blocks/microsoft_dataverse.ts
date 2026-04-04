@@ -1,6 +1,7 @@
 import { MicrosoftDataverseIcon } from '@/components/icons'
+import { getScopesForService } from '@/lib/oauth/utils'
 import type { BlockConfig } from '@/blocks/types'
-import { AuthMode } from '@/blocks/types'
+import { AuthMode, IntegrationType } from '@/blocks/types'
 import { normalizeFileInput } from '@/blocks/utils'
 import type { DataverseResponse } from '@/tools/microsoft_dataverse/types'
 
@@ -13,6 +14,8 @@ export const MicrosoftDataverseBlock: BlockConfig<DataverseResponse> = {
     'Integrate Microsoft Dataverse into your workflow. Create, read, update, delete, upsert, associate, query, search, and execute actions and functions against Dataverse tables using the Web API. Supports bulk operations, FetchXML, file uploads, and relevance search. Works with Dynamics 365, Power Platform, and custom Dataverse environments.',
   docsLink: 'https://docs.sim.ai/tools/microsoft_dataverse',
   category: 'tools',
+  integrationType: IntegrationType.Databases,
+  tags: ['microsoft-365', 'data-warehouse', 'cloud'],
   bgColor: '#E0E0E0',
   icon: MicrosoftDataverseIcon,
   subBlocks: [
@@ -46,13 +49,7 @@ export const MicrosoftDataverseBlock: BlockConfig<DataverseResponse> = {
       title: 'Microsoft Account',
       type: 'oauth-input',
       serviceId: 'microsoft-dataverse',
-      requiredScopes: [
-        'openid',
-        'profile',
-        'email',
-        'https://dynamics.microsoft.com/user_impersonation',
-        'offline_access',
-      ],
+      requiredScopes: getScopesForService('microsoft-dataverse'),
       placeholder: 'Select Microsoft account',
       required: true,
     },
